@@ -1,34 +1,36 @@
-const axios = require("axios");
-const name = "music";
+const axios = require('axios');
 
 module.exports = {
-  name,
-  description: "Creates a music by AI, based how you prompt",
-  async run({ api, send, args }){
-    const prompt = args.join(" ");
-    if (!prompt)
-    return send(`Usage: ${api.prefix + name} [your desired prompt]`);
-    send("This will take a few minutes, please wait...");
+  name: 'music',
+  description: 'Get a Spotify link for a song',
+  author: 'Deku (rest api)',
+  async execute(senderId, args, pageAccessToken, sendMessage) {
+    const query = args.join(' ');
+
     try {
-    const music = await axios.get(api.api_josh + "/api/aimusic", {
-      params: {
-        prompt
-       }
-    });
-    if (!music) throw new Error();
-    const url = music.data.result.audio;
-    await send({
-      attachment: {
-        type: "audio",
-        payload: {
-          url,
-          is_reusable: true
-        }
+      const apiUrl = `https://hiroshi-api.onrender.com/tiktok/spotify?search=${encodeURIComponent(query)}`;
+      const response = await axios.get(apiUrl);
+
+      // Extract the Spotify link from the response
+      const spotifyLink = response.data[0].download;
+
+      if (spotifyLink) {
+        // Send the MP3 file as an attachment
+        sendMessage(senderId, {
+          attachment: {
+            type: 'file',
+            payload: {
+              url: spotifyLink,
+              is_reusable: true
+            }
+          }
+        }, pageAccessToken);
+      } else {
+        sendMessage(senderId, { text: 'Sorry, no Spotify link found for that query.' }, pageAccessToken);
       }
-    });
-    send(`${prompt} created successfully!\nDownload link: ${url}`);
-    } catch (error){
-    send("Error while generating your request. Please try again or try another prompt.\n" + error.message || error);
+    } catch (error) {
+      console.error('Error retrieving Spotify link:', error);
+      sendMessage(senderId, { text: 'Sorry, there was an error processing your request.' }, pageAccessToken);
     }
   }
-}
+};
