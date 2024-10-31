@@ -7,7 +7,7 @@ const handlePostback = async (event, pageAccessToken) => {
   if (!senderId || !payload) return console.error('Invalid postback event object');
 
   try {
-    await sendMessage(senderId, { text: `You sent a postback with payload: ${payload}` }, pageAccessToken);
+    await sendMessage(senderId, { text: `Bonjour | Welcome \n▪︎Raha hijery Menu dia soraty: Help \n▪︎Raha hanamboarana Chatbot Professionnel dia: 0349310268\n\n Bon, Comment puis-je vous aider aujourd'hui ?` }, pageAccessToken);
   } catch (err) {
     console.error('Error sending postback response:', err.message || err);
   }
