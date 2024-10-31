@@ -2,14 +2,14 @@ const axios = require('axios');
 const { sendMessage } = require('../handles/sendMessage');
 
 module.exports = {
-  name: 'ai',
+  name: 'gpt4',
   description: 'Interact with GPT-4o',
-  usage: 'ai [message]',
+  usage: 'gpt4 [message]',
   author: 'coffee',
 
   async execute(senderId, args, pageAccessToken) {
     const prompt = args.join(' ');
-    if (!prompt) return sendMessage(senderId, { text: "Usage: ai <question>" }, pageAccessToken);
+    if (!prompt) return sendMessage(senderId, { text: "Usage: gpt4 <question>" }, pageAccessToken);
 
     try {
       const { data: { result } } = await axios.get(`https://joshweb.click/api/gpt-4o?q=${encodeURIComponent(prompt)}&uid=${senderId}`);
