@@ -9,7 +9,7 @@ const token = fs.readFileSync('token.txt', 'utf8');
 const lastUsage = {};
 
 module.exports = {
-  name: 'draw',
+  name: 'imagine',
   description: 'Generate an AI-based image with a 2-minute cooldown',
   author: 'Tata',
   usage:'imagine dog',
@@ -36,7 +36,7 @@ module.exports = {
     lastUsage[senderId] = currentTime;
 
     try {
-      sendMessage(senderId, { text: 'Generation de l image en cours...🤩' }, pageAccessToken);
+      sendMessage(senderId, { text: 'TsantaBot: Generation de l'image en cours...🤩' }, pageAccessToken);
       // Appel à l'API pour générer l'image
       const apiUrl = `https://ccprojectapis.ddns.net/api/blackbox/gen?prompt=${encodeURIComponent(prompt)}`;
       const response = await axios.get(apiUrl);
