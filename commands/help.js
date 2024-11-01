@@ -7,7 +7,7 @@ module.exports = {
   description: 'Show available commands',
   usage: 'help\nhelp [command name]',
   author: 'System',
-  execute(senderId, args, pageAccessToken) {
+  async execute(senderId, args, pageAccessToken) {
     const commandsDir = path.join(__dirname, '../commands');
     const commandFiles = fs.readdirSync(commandsDir).filter(file => file.endsWith('.js'));
 
@@ -34,6 +34,22 @@ module.exports = {
       return;
     }
 
+    // Define quick replies for each command
+    const quickReplies = commandFiles.map(file => {
+      const command = require(path.join(commandsDir, file));
+      return {
+        content_type: "text",
+        title: command.name,
+        payload: `HELP_${command.name.toUpperCase()}`
+      };
+    });
+
+    // Send the initial message with quick replies
+    await sendMessage(senderId, {
+      text: "🙋‍♂️ | Voici les commandes disponibles sur le bot. Cliquez sur une commande pour voir plus de détails.",
+      quick_replies: quickReplies
+    }, pageAccessToken);
+
     // Define buttons for additional links or actions
     const buttons = [
       {
@@ -48,24 +64,16 @@ module.exports = {
       }
     ];
 
-    // Create quick replies for each command
-    const quickReplies = commandFiles.map(file => {
-      const command = require(path.join(commandsDir, file));
-      return {
-        content_type: "text",
-        title: command.name,
-        payload: `HELP_${command.name.toUpperCase()}` // Payload to identify which command was clicked
-      };
-    });
-
-    // Message payload with both buttons and quick replies
-    const helpMessage = {
-      text: "🙋‍♂️ | Voici les commandes disponibles sur le bot. Cliquez sur une commande pour voir plus de détails.",
-      buttons: buttons,
-      quick_replies: quickReplies
-    };
-
-    // Send the help message with buttons and quick replies
-    sendMessage(senderId, helpMessage, pageAccessToken);
+    // Send the follow-up message with buttons
+    await sendMessage(senderId, {
+      attachment: {
+        type: "template",
+        payload: {
+          template_type: "button",
+          text: "Options supplémentaires:",
+          buttons: buttons
+        }
+      }
+    }, pageAccessToken);
   }
 };
