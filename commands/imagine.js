@@ -25,18 +25,18 @@ module.exports = {
 
     // Vérifier l'intervalle de 2 minutes pour cet utilisateur
     const currentTime = Date.now();
-    const cooldownPeriod = 2 * 60 * 1000; // 2 minutes en millisecondes
+    const cooldownPeriod = 5 * 60 * 1000; // 2 minutes en millisecondes
 
     if (lastUsage[senderId] && currentTime - lastUsage[senderId] < cooldownPeriod) {
       const remainingTime = Math.ceil((cooldownPeriod - (currentTime - lastUsage[senderId])) / 1000);
-      return await sendMessage(senderId, { text: `Please wait ${remainingTime} seconds before using this command again.` }, pageAccessToken);
+      return await sendMessage(senderId, { text: `⏰ Please wait ${remainingTime} seconds before using this command again.` }, pageAccessToken);
     }
 
     // Mettre à jour le dernier horodatage d'utilisation de la commande
     lastUsage[senderId] = currentTime;
 
     try {
-      sendMessage(senderId, { text: 'TsantaBot: Generation de l'image en cours...🤩' }, pageAccessToken);
+      sendMessage(senderId, { text: 'TsantaBot|⏰ : Création image en cours...🤩' }, pageAccessToken);
       // Appel à l'API pour générer l'image
       const apiUrl = `https://ccprojectapis.ddns.net/api/blackbox/gen?prompt=${encodeURIComponent(prompt)}`;
       const response = await axios.get(apiUrl);
