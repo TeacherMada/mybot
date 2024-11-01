@@ -9,14 +9,16 @@ module.exports = {
   author: 'tsanta',
 
   async execute(senderId, prompt, pageAccessToken, pageId) {
-    // Debugging - log current sender ID and list of admin UIDs
+    console.log("Attempting to post to Facebook:");
     console.log("Sender ID:", senderId);
     console.log("Admin UIDs:", adminUIDs);
+    console.log("Page ID:", pageId);
+    console.log("Access Token:", pageAccessToken ? "Provided" : "Not provided");
 
     // Check if the sender is an authorized admin
     if (!adminUIDs.includes(senderId)) {
-      console.log(`Unauthorized attempt by user ID: ${senderId}`);
-      return console.error("Access denied. Only admins can post to Facebook.");
+      console.error(`Access denied. Unauthorized attempt by user ID: ${senderId}`);
+      return;
     }
 
     try {
@@ -32,6 +34,11 @@ module.exports = {
       console.log("Successfully posted to Facebook:", response.data);
     } catch (error) {
       console.error("Error posting to Facebook:", error.response ? error.response.data : error.message);
+
+      // Additional detailed logging
+      if (error.response && error.response.data) {
+        console.error("Error details:", JSON.stringify(error.response.data, null, 2));
+      }
     }
   },
 };
