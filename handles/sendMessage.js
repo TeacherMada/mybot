@@ -26,13 +26,26 @@ const sendMessage = async (senderId, { text = '', attachment = null }, pageAcces
     }
 
     if (attachment) {
-      messagePayload.message.attachment = {
-        type: attachment.type,
-        payload: {
-          url: attachment.payload.url,
-          is_reusable: true
-        }
-      };
+      // Check if attachment is a template and requires template_type
+      if (attachment.type === "template" && attachment.payload.template_type) {
+        messagePayload.message.attachment = {
+          type: attachment.type,
+          payload: {
+            template_type: attachment.payload.template_type,
+            elements: attachment.payload.elements || [],
+            text: attachment.payload.text || ''
+          }
+        };
+      } else {
+        // Regular attachment with URL (e.g., image, video, etc.)
+        messagePayload.message.attachment = {
+          type: attachment.type,
+          payload: {
+            url: attachment.payload.url,
+            is_reusable: true
+          }
+        };
+      }
     }
 
     // Send the message
