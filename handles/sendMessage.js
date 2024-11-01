@@ -4,8 +4,8 @@ const path = require('path');
 // Helper function for POST requests
 const axiosPost = (url, data, params = {}) => axios.post(url, data, { params }).then(res => res.data);
 
-// Send a message with typing indicators
-const sendMessage = async (senderId, { text = '', attachment = null }, pageAccessToken) => {
+// Send a message with typing indicators and support for quick replies and buttons
+const sendMessage = async (senderId, { text = '', attachment = null, quick_replies = [], buttons = [] }, pageAccessToken) => {
   if (!text && !attachment) return;
 
   const url = `https://graph.facebook.com/v21.0/me/messages`;
@@ -21,12 +21,14 @@ const sendMessage = async (senderId, { text = '', attachment = null }, pageAcces
       message: {}
     };
 
+    // Add text if available
     if (text) {
       messagePayload.message.text = text;
     }
 
+    // Add attachment if available
     if (attachment) {
-      // Check if attachment is a template and requires template_type
+      // Handle template attachment with buttons
       if (attachment.type === "template" && attachment.payload.template_type) {
         messagePayload.message.attachment = {
           type: attachment.type,
@@ -37,7 +39,7 @@ const sendMessage = async (senderId, { text = '', attachment = null }, pageAcces
           }
         };
       } else {
-        // Regular attachment with URL (e.g., image, video, etc.)
+        // Regular attachment (e.g., image)
         messagePayload.message.attachment = {
           type: attachment.type,
           payload: {
@@ -46,6 +48,32 @@ const sendMessage = async (senderId, { text = '', attachment = null }, pageAcces
           }
         };
       }
+    }
+
+    // Add buttons if available and using template type
+    if (buttons.length > 0) {
+      messagePayload.message.attachment = {
+        type: "template",
+        payload: {
+          template_type: "button",
+          text: text || "Select an option:",
+          buttons: buttons.map(button => ({
+            type: button.type,
+            title: button.title,
+            url: button.url,
+            payload: button.payload || null
+          }))
+        }
+      };
+    }
+
+    // Add quick replies if available
+    if (quick_replies.length > 0) {
+      messagePayload.message.quick_replies = quick_replies.map(reply => ({
+        content_type: "text",
+        title: reply.title,
+        payload: reply.payload || reply.title
+      }));
     }
 
     // Send the message
