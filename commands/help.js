@@ -34,23 +34,38 @@ module.exports = {
       return;
     }
 
-    // Create buttons for each command
-    const buttons = commandFiles.map(file => {
+    // Define buttons for additional links or actions
+    const buttons = [
+      {
+        type: "web_url",
+        url: "https://www.facebook.com/YourAdminProfile",
+        title: "Contact Admin"
+      },
+      {
+        type: "postback",
+        title: "Voir plus de commandes",
+        payload: "SEE_MORE_COMMANDS"
+      }
+    ];
+
+    // Create quick replies for each command
+    const quickReplies = commandFiles.map(file => {
       const command = require(path.join(commandsDir, file));
       return {
-        type: "postback",  // Use postback to trigger actions when buttons are clicked
+        content_type: "text",
         title: command.name,
         payload: `HELP_${command.name.toUpperCase()}` // Payload to identify which command was clicked
       };
     });
 
-    // Message payload with buttons for commands
+    // Message payload with both buttons and quick replies
     const helpMessage = {
-      text: "🤖 | Voici les commandes disponibles. Cliquez sur un bouton pour en savoir plus.",
-      buttons: buttons
+      text: "🙋‍♂️ | Voici les commandes disponibles sur le bot. Cliquez sur une commande pour voir plus de détails.",
+      buttons: buttons,
+      quick_replies: quickReplies
     };
 
-    // Send the help message with buttons
+    // Send the help message with buttons and quick replies
     sendMessage(senderId, helpMessage, pageAccessToken);
   }
 };
