@@ -21,11 +21,10 @@ module.exports = {
       if (commandFile) {
         const command = require(path.join(commandsDir, commandFile));
         const commandDetails = `
-━━━━━━━━━━━━━━
-▪︎𝙲𝚘𝚖𝚖𝚊𝚗𝚍 𝙽𝚊𝚖𝚎: ${command.name}
+▪︎𝙲𝚘𝚖𝚖𝚊𝚗𝚍e: ${command.name}
 ▪︎𝙳𝚎𝚜𝚌𝚛𝚒p𝚝𝚒𝚘𝚗: ${command.description}
 ▪︎𝚄𝚜𝚊𝚐𝚎: ${command.usage}
-━━━━━━━━━━━━━━`;
+`;
         
         sendMessage(senderId, { text: commandDetails }, pageAccessToken);
       } else {
@@ -50,16 +49,16 @@ module.exports = {
         type: "template",
         payload: {
           template_type: "button",
-          text: `🤖 | Voici les commandes disponibles sur le bot. Cliquez sur une commande pour voir plus de détails.`,
+          text: `🤖 | Voici les commandes disponibles sur TsantaBot. Cliquez sur une commande pour voir plus de détails.`,
           buttons: [
             {
               type: "web_url",
-              url: "https://www.facebook.com/tsanta.rabemananjara",
-              title: "Contact Admin"
+              url: "https://www.facebook.com/profile.php?id=61552825191002",
+              title: "Fb Admin"
             },
             {
               type: "phone_number",
-              title: "Appeler Admin",
+              title: "Contact Admin",
               payload: "+261349310268"  // Numéro de téléphone de l'admin
             }
           ]
