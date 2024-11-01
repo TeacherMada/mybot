@@ -3,7 +3,7 @@ const path = require('path');
 const { sendMessage } = require('../handles/sendMessage');
 
 module.exports = {
-  name: 'help',
+  name: 'menu',
   description: 'Show available commands',
   usage: 'help\nhelp [command name]',
   author: 'System',
