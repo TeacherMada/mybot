@@ -12,7 +12,6 @@ module.exports = {
   description: 'Search for YouTube videos and send a list for the user to select',
   author: 'Tata',
   
-
   async execute(senderId, args) {
     const pageAccessToken = token;
     const searchQuery = args.join(' ').trim();
@@ -33,7 +32,7 @@ module.exports = {
           `${index + 1}. ${video.title} (${video.duration})`
         )).join('\n');
 
-        await sendMessage(senderId, { text: `🔎 Voici les résultats de recherche pour "${searchQuery}":\n\n${messageText}\n\nEnvoyez le numéro de la vidéo souhaitée.` }, pageAccessToken);
+        await sendMessage(senderId, { text: `🔎 Voici les résultats de recherche pour "${searchQuery}":\n${messageText}\n\nEnvoyez le numéro de la vidéo souhaitée.` }, pageAccessToken);
       } else {
         await sendMessage(senderId, { text: "Je n'ai trouvé aucune vidéo correspondant à votre recherche." }, pageAccessToken);
       }
