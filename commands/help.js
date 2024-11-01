@@ -34,54 +34,23 @@ module.exports = {
       return;
     }
 
-    // Créer des quick replies pour chaque commande
-    const quick_replies = commandFiles.map(file => {
+    // Create buttons for each command
+    const buttons = commandFiles.map(file => {
       const command = require(path.join(commandsDir, file));
       return {
-        content_type: "text",
+        type: "postback",  // Use postback to trigger actions when buttons are clicked
         title: command.name,
-        payload: command.name.toUpperCase()  // Payload peut être utilisé pour identifier la commande
+        payload: `HELP_${command.name.toUpperCase()}` // Payload to identify which command was clicked
       };
     });
 
-    // Structure du message avec boutons et quick replies
+    // Message payload with buttons for commands
     const helpMessage = {
-      text: `🤖 | Voici les commandes disponibles sur le bot. Cliquez sur une commande pour voir plus de détails.`,
-      quick_replies: quick_replies.concat([
-        {
-          content_type: "text",
-          title: "Contact Admin",
-          payload: "CONTACT_ADMIN"
-        }
-      ])
+      text: "🤖 | Voici les commandes disponibles. Cliquez sur un bouton pour en savoir plus.",
+      buttons: buttons
     };
 
-    // Envoyer le message avec quick replies
+    // Send the help message with buttons
     sendMessage(senderId, helpMessage, pageAccessToken);
-    
-    // Envoyer un autre message avec les boutons de contact (en tant que message séparé)
-    const contactButtons = {
-      attachment: {
-        type: "template",
-        payload: {
-          template_type: "button",
-          text: "Pour plus d'aide ou contacter l'admin:",
-          buttons: [
-            {
-              type: "web_url",
-              url: "https://www.facebook.com/tsanta.rabemananjara",
-              title: "Contact Facebook"
-            },
-            {
-              type: "phone_number",
-              title: "Appeler Admin",
-              payload: "+261349310268"  // Numéro de téléphone de l'admin
-            }
-          ]
-        }
-      }
-    };
-
-    sendMessage(senderId, contactButtons, pageAccessToken);
   }
 };
