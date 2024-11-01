@@ -21,10 +21,11 @@ module.exports = {
       if (commandFile) {
         const command = require(path.join(commandsDir, commandFile));
         const commandDetails = `
-▪︎𝙲𝚘𝚖𝚖𝚊𝚗𝚍e: ${command.name}
+━━━━━━━━━━━━━━
+▪︎𝙲𝚘𝚖𝚖𝚊𝚗𝚍 𝙽𝚊𝚖𝚎: ${command.name}
 ▪︎𝙳𝚎𝚜𝚌𝚛𝚒p𝚝𝚒𝚘𝚗: ${command.description}
 ▪︎𝚄𝚜𝚊𝚐𝚎: ${command.usage}
-`;
+━━━━━━━━━━━━━━`;
         
         sendMessage(senderId, { text: commandDetails }, pageAccessToken);
       } else {
@@ -43,30 +44,44 @@ module.exports = {
       };
     });
 
-    // Créer un message avec boutons et quick replies
+    // Structure du message avec boutons et quick replies
     const helpMessage = {
+      text: `🤖 | Voici les commandes disponibles sur le bot. Cliquez sur une commande pour voir plus de détails.`,
+      quick_replies: quick_replies.concat([
+        {
+          content_type: "text",
+          title: "Contact Admin",
+          payload: "CONTACT_ADMIN"
+        }
+      ])
+    };
+
+    // Envoyer le message avec quick replies
+    sendMessage(senderId, helpMessage, pageAccessToken);
+    
+    // Envoyer un autre message avec les boutons de contact (en tant que message séparé)
+    const contactButtons = {
       attachment: {
         type: "template",
         payload: {
           template_type: "button",
-          text: `🤖 | Voici les commandes disponibles sur TsantaBot. Cliquez sur une commande pour voir plus de détails.`,
+          text: "Pour plus d'aide ou contacter l'admin:",
           buttons: [
             {
               type: "web_url",
-              url: "https://www.facebook.com/profile.php?id=61552825191002",
-              title: "Fb Admin"
+              url: "https://www.facebook.com/tsanta.rabemananjara",
+              title: "Contact Facebook"
             },
             {
               type: "phone_number",
-              title: "Contact Admin",
+              title: "Appeler Admin",
               payload: "+261349310268"  // Numéro de téléphone de l'admin
             }
           ]
         }
-      },
-      quick_replies  // Ajout des quick replies
+      }
     };
 
-    sendMessage(senderId, helpMessage, pageAccessToken);
+    sendMessage(senderId, contactButtons, pageAccessToken);
   }
 };
