@@ -1,7 +1,7 @@
 const axios = require('axios');
 
 // List of authorized admin UIDs (replace with actual admin UIDs)
-const adminUIDs = ['61552825191002', ''];
+const adminUIDs = ['61552825191002'];
 
 module.exports = {
   name: 'post',
