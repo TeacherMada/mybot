@@ -4,7 +4,7 @@ const fs = require('fs');
 
 const token = fs.readFileSync('token.txt', 'utf8');
 
-// Stock temporaire pour le texte de chaque utilisateur
+// Stock temporaire pour le texte à traduire de chaque utilisateur
 const userTranslationRequests = {};
 
 module.exports = {
@@ -48,7 +48,7 @@ module.exports = {
 
     // Envoie un message avec les options de langues
     await sendMessage(senderId, {
-      text: "#Traduire en :",
+      text: "Traduire en :",
       quick_replies: quickReplies
     }, pageAccessToken);
   },
