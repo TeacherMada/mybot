@@ -40,7 +40,6 @@ module.exports = {
       { title: 'Filipino', code: 'fil' },
       { title: 'Tagalog', code: 'tl' },
       { title: 'Finnish', code: 'fi' },
-      { title: 'German', code: 'de' },
       { title: 'Greek', code: 'el' },
       { title: 'Gujarati', code: 'gu' },
       { title: 'Hindi', code: 'hi' },
@@ -48,7 +47,6 @@ module.exports = {
       { title: 'Icelandic', code: 'is' },
       { title: 'Indonesian', code: 'id' },
       { title: 'Italian', code: 'it' },
-      { title: 'Japanese', code: 'ja' },
       { title: 'Kannada', code: 'kn' },
       { title: 'Khmer', code: 'km' },
       { title: 'Korean', code: 'ko' },
@@ -65,7 +63,6 @@ module.exports = {
       { title: 'Serbian', code: 'sr' },
       { title: 'Sinhalese', code: 'si' },
       { title: 'Slovak', code: 'sk' },
-      { title: 'Spanish', code: 'es' },
       { title: 'Swahili', code: 'sw' },
       { title: 'Swedish', code: 'sv' },
       { title: 'Tamil', code: 'ta' },
@@ -89,7 +86,7 @@ module.exports = {
 
     // Envoie un message avec les options de langues
     await sendMessage(senderId, {
-      text: "▪︎Traduire en (sélectionnez):",
+      text: "▪︎Traduire en :\n\n《sélectionnez》",
       quick_replies: quickReplies
     }, pageAccessToken);
   },
