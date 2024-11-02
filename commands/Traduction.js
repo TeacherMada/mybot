@@ -19,7 +19,7 @@ module.exports = {
 
     // Vérifie si du texte est fourni pour la traduction
     if (!content) {
-      return await sendMessage(senderId, { text: 'Veuillez fournir un texte à traduire.' }, pageAccessToken);
+      return await sendMessage(senderId, { text: '▪︎Veuillez fournir un texte à traduire.\n\n ▪︎Ex: Traduction I love you' }, pageAccessToken);
     }
 
     // Liste des langues disponibles
@@ -34,10 +34,6 @@ module.exports = {
       { title: 'Chinois', code: 'zh' },
       { title: 'Arabe', code: 'ar' },
       { title: 'Russe', code: 'ru' },
-      { title: 'Portugais', code: 'pt' },
-      { title: 'Vietnam', code: 'vi' },
-      { title: 'Latin', code: 'la' },
-      { title: 'Korean', code: 'ko' },
     ];
 
     // Crée les quick replies pour chaque langue
