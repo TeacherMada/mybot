@@ -4,10 +4,10 @@ const { sendMessage } = require('../handles/sendMessage');
 
 module.exports = {
   name: 'help',
-  description: 'Show available commands',
-  usage: 'help\nhelp [command name]',
+  description: 'Liste commandes',
+  usage: 'help [commande]',
   author: 'System',
-  async execute(senderId, args, pageAccessToken) {
+  execute(senderId, args, pageAccessToken) {
     const commandsDir = path.join(__dirname, '../commands');
     const commandFiles = fs.readdirSync(commandsDir).filter(file => file.endsWith('.js'));
 
@@ -21,59 +21,34 @@ module.exports = {
       if (commandFile) {
         const command = require(path.join(commandsDir, commandFile));
         const commandDetails = `
-━━━━━━━━━━━━━━
-▪︎𝙲𝚘𝚖𝚖𝚊𝚗𝚍 𝙽𝚊𝚖𝚎: ${command.name}
-▪︎𝙳𝚎𝚜𝚌𝚛𝚒p𝚝𝚒𝚘𝚗: ${command.description}
-▪︎𝚄𝚜𝚊𝚐𝚎: ${command.usage}
-━━━━━━━━━━━━━━`;
+▪︎Commande: ${command.name}
+▪︎Description: ${command.description}
+▪︎Usage: ${command.usage}`;
         
         sendMessage(senderId, { text: commandDetails }, pageAccessToken);
       } else {
-        sendMessage(senderId, { text: `Command "${commandName}" not found.` }, pageAccessToken);
+        sendMessage(senderId, { text: `Aucune commande "${commandName}" trouvé`}, pageAccessToken);
       }
       return;
     }
 
-    // Define quick replies for each command
-    const quickReplies = commandFiles.map(file => {
+    const commands = commandFiles.map(file => {
       const command = require(path.join(commandsDir, file));
-      return {
-        content_type: "text",
-        title: command.name,
-        payload: `HELP_${command.name.toUpperCase()}`
-      };
+      return `│─➤ ${command.name}`;
     });
 
-    // Send the initial message with quick replies
-    await sendMessage(senderId, {
-      text: "🙋‍♂️ | Voici les commandes disponibles sur le bot. Cliquez sur une commande pour voir plus de détails.",
-      quick_replies: quickReplies
-    }, pageAccessToken);
+    const helpMessage = `
+ TsantaBot Commandes disponibles 
+╭──○○○
+${commands.join('\n')}
+╰──────────○
+#Aide:
+▪︎help [commande]
+▪︎Contact: 0349310268
+▪︎Fb: https://www.facebook.com/profile.php?id=61552825191002
+✅ Afaka manambotra Chatbot ho anao ihany koa aho 
+`;
 
-    // Define buttons for additional links or actions
-    const buttons = [
-      {
-        type: "web_url",
-        url: "https://www.facebook.com/YourAdminProfile",
-        title: "Contact Admin"
-      },
-      {
-        type: "postback",
-        title: "Voir plus de commandes",
-        payload: "SEE_MORE_COMMANDS"
-      }
-    ];
-
-    // Send the follow-up message with buttons
-    await sendMessage(senderId, {
-      attachment: {
-        type: "template",
-        payload: {
-          template_type: "button",
-          text: "Options supplémentaires:",
-          buttons: buttons
-        }
-      }
-    }, pageAccessToken);
+    sendMessage(senderId, { text: helpMessage }, pageAccessToken);
   }
 };
