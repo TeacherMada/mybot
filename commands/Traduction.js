@@ -48,19 +48,22 @@ module.exports = {
 
     // Envoie un message avec les options de langues
     await sendMessage(senderId, {
-      text: "•Traduire en :",
+      text: "#Traduire en :",
       quick_replies: quickReplies
     }, pageAccessToken);
   },
 
   // Fonction pour gérer la réponse de l'utilisateur lorsqu'il choisit une langue
-  async handleUserLanguageSelection(senderId, payload) {
+  async handleUserResponse(senderId, payload) {
     const pageAccessToken = token;
+
+    // Vérifie que le payload contient une langue
+    if (!payload.startsWith('TRANSLATE_')) return;
 
     // Récupère le code de la langue depuis le payload
     const targetLanguage = payload.replace('TRANSLATE_', '');
 
-    // Récupère le texte à traduire
+    // Récupère le texte à traduire pour cet utilisateur
     const content = userTranslationRequests[senderId];
 
     // Si aucun texte en attente de traduction
@@ -82,13 +85,11 @@ module.exports = {
         if (item[0]) translatedText += item[0];
       });
 
-      // Formater le message avec la traduction
-      const formattedMessage = `Voici la traduction : ${translatedText}`;
-
-      // Envoi du message avec la traduction à l'utilisateur
+      // Envoi du message avec la traduction
+      const formattedMessage = `Traduction : ${translatedText}`;
       await sendMessage(senderId, { text: formattedMessage }, pageAccessToken);
 
-      // Suppression de la requête de traduction pour cet utilisateur
+      // Supprime la requête de traduction après l'envoi
       delete userTranslationRequests[senderId];
     } catch (error) {
       console.error('Error:', error);
