@@ -4,6 +4,9 @@ const fs = require('fs');
 
 const token = fs.readFileSync('token.txt', 'utf8');
 
+// Stock temporaire pour le texte de chaque utilisateur
+const userTranslationRequests = {};
+
 module.exports = {
   name: 'trans',
   description: 'Traduire un texte vers une langue cible',
@@ -14,6 +17,7 @@ module.exports = {
     const pageAccessToken = token;
     const content = args.join(' ').trim();
 
+    // Vérifie si du texte est fourni pour la traduction
     if (!content) {
       return await sendMessage(senderId, { text: 'Veuillez fournir un texte à traduire.' }, pageAccessToken);
     }
@@ -32,60 +36,59 @@ module.exports = {
       { title: 'Portugais', code: 'pt' },
     ];
 
-    // Création des `quick_replies`
+    // Crée les quick replies pour chaque langue
     const quickReplies = languages.map(lang => ({
       content_type: 'text',
       title: lang.title,
       payload: `TRANSLATE_${lang.code}`, // Utilisé pour identifier la langue choisie
     }));
 
-    // Stocker le texte à traduire pour cet utilisateur
+    // Stocke le texte à traduire pour cet utilisateur
     userTranslationRequests[senderId] = content;
 
-    // Envoyer un message demandant à l'utilisateur de choisir une langue
+    // Envoie un message avec les options de langues
     await sendMessage(senderId, {
-      text: "▪︎Traduire en :",
+      text: "•Traduire en :",
       quick_replies: quickReplies
     }, pageAccessToken);
   },
 
-  // Cette fonction est appelée lorsqu'un utilisateur sélectionne une langue
+  // Fonction pour gérer la réponse de l'utilisateur lorsqu'il choisit une langue
   async handleUserLanguageSelection(senderId, payload) {
     const pageAccessToken = token;
 
-    // Extraire le code de la langue depuis le payload
+    // Récupère le code de la langue depuis le payload
     const targetLanguage = payload.replace('TRANSLATE_', '');
 
-    // Récupérer le texte à traduire
+    // Récupère le texte à traduire
     const content = userTranslationRequests[senderId];
 
-    // Si aucun texte n'est stocké pour cet utilisateur
+    // Si aucun texte en attente de traduction
     if (!content) {
       return await sendMessage(senderId, { text: "Aucun texte en attente de traduction." }, pageAccessToken);
     }
 
-    // URL de l'API Google Translate
+    // URL pour appeler l'API Google Translate
     const translateUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${encodeURIComponent(targetLanguage)}&dt=t&q=${encodeURIComponent(content)}`;
 
     try {
-      // Appel de l'API pour obtenir la traduction
+      // Appel de l'API Google Translate
       const response = await axios.get(translateUrl);
       const data = response.data;
 
-      // Extraction du texte traduit depuis la réponse de l'API
+      // Extraction du texte traduit
       let translatedText = '';
       data[0].forEach(item => {
         if (item[0]) translatedText += item[0];
       });
 
-      // Langue source détectée
-      const fromLang = data[2] === data[8][0][0] ? data[2] : data[8][0][0];
-      const formattedMessage = `Traduction : ${translatedText}\n- Traduit de ${fromLang} vers ${targetLanguage}`;
+      // Formater le message avec la traduction
+      const formattedMessage = `Voici la traduction : ${translatedText}`;
 
-      // Envoyer le message de traduction à l'utilisateur
+      // Envoi du message avec la traduction à l'utilisateur
       await sendMessage(senderId, { text: formattedMessage }, pageAccessToken);
 
-      // Supprimer la requête de traduction de l'utilisateur
+      // Suppression de la requête de traduction pour cet utilisateur
       delete userTranslationRequests[senderId];
     } catch (error) {
       console.error('Error:', error);
@@ -93,6 +96,3 @@ module.exports = {
     }
   }
 };
-
-// Stock temporaire pour le texte de chaque utilisateur
-const userTranslationRequests = {};
