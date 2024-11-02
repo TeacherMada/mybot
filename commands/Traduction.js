@@ -10,7 +10,6 @@ module.exports = {
   author: 'Tata',
   usage: 'trans [texte à traduire]',
 
-  // Cette fonction est appelée quand l'utilisateur demande une traduction
   async execute(senderId, args) {
     const pageAccessToken = token;
     const content = args.join(' ').trim();
@@ -45,13 +44,15 @@ module.exports = {
 
     // Envoyer un message demandant à l'utilisateur de choisir une langue
     await sendMessage(senderId, {
-      text: "Traduire en :",
+      text: "▪︎Traduire en :",
       quick_replies: quickReplies
     }, pageAccessToken);
   },
 
   // Cette fonction est appelée lorsqu'un utilisateur sélectionne une langue
-  async handleUserLanguageSelection(senderId, payload, pageAccessToken) {
+  async handleUserLanguageSelection(senderId, payload) {
+    const pageAccessToken = token;
+
     // Extraire le code de la langue depuis le payload
     const targetLanguage = payload.replace('TRANSLATE_', '');
 
@@ -79,7 +80,7 @@ module.exports = {
 
       // Langue source détectée
       const fromLang = data[2] === data[8][0][0] ? data[2] : data[8][0][0];
-      const formattedMessage = `Traduction: ${translatedText}\n- Traduite de ${fromLang} vers ${targetLanguage}`;
+      const formattedMessage = `Traduction : ${translatedText}\n- Traduit de ${fromLang} vers ${targetLanguage}`;
 
       // Envoyer le message de traduction à l'utilisateur
       await sendMessage(senderId, { text: formattedMessage }, pageAccessToken);
@@ -93,4 +94,5 @@ module.exports = {
   }
 };
 
-const userTranslationRequests = {}; // Stock temporaire pour le texte de chaque utilisateur
+// Stock temporaire pour le texte de chaque utilisateur
+const userTranslationRequests = {};
