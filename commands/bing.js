@@ -5,14 +5,14 @@ const { sendMessage } = require('../handles/sendMessage');
 module.exports = {
   name: 'bing',
   description: 'Generates an image using the Bing Image Generator based on a prompt.',
-  usage: 'bing [prompt]',
+  usage: '/bing [prompt]',
   author: 'MakoyQx',
 
   async execute(senderId, args, pageAccessToken) {
     // Check if prompt arguments are provided
     if (!args || args.length === 0) {
       await sendMessage(senderId, {
-        text: '❌ Please provide your prompt.\n\n-Example: bing dog'
+        text: '❌ Please provide your prompt.\n\nExample: /bing dog.'
       }, pageAccessToken);
       return;
     }
@@ -23,7 +23,7 @@ module.exports = {
 
     // Notify user that the image is being generated
     await sendMessage(senderId, {
-      text: '⌛ Création en cours...'
+      text: '⌛ Generating image based on your prompt, please wait...'
     }, pageAccessToken);
 
     try {
