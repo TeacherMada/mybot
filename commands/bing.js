@@ -1,56 +1,78 @@
 const axios = require('axios');
-const { sendMessage } = require('../handles/sendMessage');
 
-// Define and export the module
 module.exports = {
   name: 'bing',
-  description: 'Generates an image using the Bing Image Generator based on a prompt.',
-  usage: '/bing [prompt]',
-  author: 'MakoyQx',
+  description: 'Generate and send images directly from Bing based on your prompt.',
+  author: 'Jerome',
 
-  async execute(senderId, args, pageAccessToken) {
-    // Check if prompt arguments are provided
-    if (!args || args.length === 0) {
-      await sendMessage(senderId, {
-        text: '❌ Please provide your prompt.\n\nExample: /bing dog.'
-      }, pageAccessToken);
-      return;
+  async execute(senderId, args, pageAccessToken, sendMessage) {
+    if (args.length === 0) {
+      return sendMessage(senderId, { text: 'Please provide a prompt. Example: bing dog' }, pageAccessToken);
     }
 
-    // Concatenate arguments to form the prompt
+    // Combine args to form the prompt
     const prompt = args.join(' ');
-    const apiUrl = `https://jerome-web.gleeze.com/service/api/bing?prompt=${encodeURIComponent(prompt)}`;
+    const apiUrl = `https://jerome-web.onrender.com/service/api/bing?prompt=${encodeURIComponent(prompt)}`;
 
-    // Notify user that the image is being generated
-    await sendMessage(senderId, {
-      text: '⌛ Generating image based on your prompt, please wait...'
-    }, pageAccessToken);
+    // Loading messages to keep the user engaged
+    const loadingMessages = [
+      '🔄 Hold on! Generating your image...',
+      '✨ Crafting your image, please wait...',
+      '🎨 Creating your visual masterpiece...'
+    ];
+    const loadingMessage = loadingMessages[Math.floor(Math.random() * loadingMessages.length)];
+    await sendMessage(senderId, { text: loadingMessage }, pageAccessToken);
+
+    // Confirming prompt
+    await sendMessage(senderId, { text: `You requested: "${prompt}". Let's see what we get!` }, pageAccessToken);
 
     try {
-      // Make the API call to generate the image
+      // Call the Bing API
       const response = await axios.get(apiUrl);
+      const data = response.data;
 
-      if (response.data && response.data.imageUrl) {
-        // Send the generated image to the user
-        await sendMessage(senderId, {
+      if (data.success && data.result && data.result.length > 0) {
+        // Send up to 4 images if available
+        const imageMessages = data.result.slice(0, 4).map((imageUrl) => ({
           attachment: {
             type: 'image',
             payload: {
-              url: response.data.imageUrl // Ensure the API returns this field
+              url: imageUrl,
+              is_reusable: true
             }
           }
-        }, pageAccessToken);
+        }));
+
+        for (const imageMessage of imageMessages) {
+          await sendMessage(senderId, imageMessage, pageAccessToken);
+        }
+
+        // Success messages
+        const successMessages = [
+          "Here's what I found! Hope you like it! 🎉",
+          "Done! Enjoy your images. 😊",
+          "Here’s your request—let me know what you think! 🤩"
+        ];
+        const successMessage = successMessages[Math.floor(Math.random() * successMessages.length)];
+        await sendMessage(senderId, { text: successMessage }, pageAccessToken);
+
       } else {
-        throw new Error("Image URL not found in response.");
+        // Notify user if no images found
+        await sendMessage(senderId, { text: `Sorry, no images were found for "${prompt}".` }, pageAccessToken);
+      }
+      
+    } catch (error) {
+      console.error('Error fetching Bing images:', error);
+
+      // Enhanced error messages
+      let errorMessage = 'Sorry, there was an error processing your request.';
+      if (error.response) {
+        errorMessage = 'There was an issue with the Bing Image Generator. Please try again later.';
+      } else if (error.request) {
+        errorMessage = 'It looks like there’s a network problem. Please check your connection and try again.';
       }
 
-    } catch (error) {
-      console.error('Error generating image:', error);
-      
-      // Notify the user of the error
-      await sendMessage(senderId, {
-        text: '❌ An error occurred while generating the image. Please try again later.'
-      }, pageAccessToken);
+      await sendMessage(senderId, { text: errorMessage }, pageAccessToken);
     }
   }
 };
