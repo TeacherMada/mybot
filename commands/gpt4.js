@@ -12,7 +12,8 @@ module.exports = {
     if (!prompt) return sendMessage(senderId, { text: "Usage: gpt4 <question>" }, pageAccessToken);
 
     try {
-      const { data: { result } } = await axios.get(`https://joshweb.click/api/gpt-4o?q=${encodeURIComponent(prompt)}&uid=${senderId}`);
+      // original api: https://joshweb.click/api/gpt-4o?q=${encodeURIComponent(prompt)}&uid=${senderId}
+      const { data: { result } } = await axios.get(`https:y2pheq.me/gpt4?prompt=${encodeURIComponent(prompt)}&uid=${senderId}`);
       sendMessage(senderId, { text: result }, pageAccessToken);
     } catch {
       sendMessage(senderId, { text: 'There was an error generating the content. Please try again later.' }, pageAccessToken);
