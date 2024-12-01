@@ -9,14 +9,15 @@ module.exports = {
 
   async execute(senderId, args, pageAccessToken) {
     const prompt = args.join(' ');
-    if (!prompt) return sendMessage(senderId, { text: "Usage: gpt4 <question>" }, pageAccessToken);
+    if (!prompt) {
+      return sendMessage(senderId, { text: "•Usage: gpt4 <question>" }, pageAccessToken);
+    }
 
     try {
-      // original api: https://joshweb.click/api/gpt-4o?q=${encodeURIComponent(prompt)}&uid=${senderId}
       const { data: { result } } = await axios.get(`https://kaiz-apis.gleeze.com/api/gpt-4o?q=${encodeURIComponent(prompt)}&uid=${senderId}`);
       sendMessage(senderId, { text: result }, pageAccessToken);
-    } catch {
-      sendMessage(senderId, { text: 'There was an error generating the content. Please try again later.' }, pageAccessToken);
+    } catch (error) {
+      sendMessage(senderId, { text: '•There was an error generating the content. Please try again later.' }, pageAccessToken);
     }
   }
 };
