@@ -18,7 +18,7 @@ module.exports = {
     try {
       const response = await axios.get(`https://www.samirxpikachu.run.place/gpt?content=${encodeURIComponent(modifiedPrompt)}`);
       const data = response.data;
-      const formattedMessage = `🤖: ${data.message.content}`;
+      const formattedMessage = `🤖| ${data.message.content}`;
 
       await sendMessage(senderId, { text: formattedMessage }, pageAccessToken);
     } catch (error) {
