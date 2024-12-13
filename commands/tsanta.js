@@ -2,8 +2,8 @@ const axios = require("axios");
 const { sendMessage } = require('../handles/sendMessage');
 
 module.exports = {
-  name: "tsanta",
-  description: "Interact with Tsanta AI Advanced ft. Vision",
+  name: "gemini",
+  description: "Interact with Gemini AI Advanced ft. Vision",
   author: "Rized",
 
   async execute(senderId, args, pageAccessToken, event, imageUrl) {
@@ -13,7 +13,7 @@ module.exports = {
       return sendMessage(
         senderId,
         { 
-          text: `-Ex: tsanta Comment ça va?` 
+          text: `❌ 𝗣𝗹𝗲𝗮𝘀𝗲 𝗽𝗿𝗼𝘃𝗶𝗱𝗲 𝗮 𝗾𝘂𝗲𝘀𝘁𝗶𝗼𝗻 𝗳𝗼𝗿 𝗚𝗲𝗺𝗶𝗻𝗶 𝗔𝗱𝘃𝗮𝗻𝗰𝗲𝗱 𝗼𝗿 𝗮𝗻 𝗶𝗺𝗮𝗴𝗲 𝘄𝗶𝘁𝗵 𝗮 𝗱𝗲𝘀𝗰𝗿𝗶𝗽𝘁𝗶𝗼𝗻 𝗳𝗼𝗿 𝗙𝗹𝗮𝘀𝗵 𝗩𝗶𝘀𝗶𝗼𝗻.` 
         }, 
         pageAccessToken
       );
@@ -21,7 +21,7 @@ module.exports = {
 
     sendMessage(
       senderId,
-      { text: "⏰ | Attendez svp..." },
+      { text: "⌛ 𝗚𝗲𝗺𝗶𝗻𝗶 𝗶𝘀 𝘁𝗵𝗶𝗻𝗸𝗶𝗻𝗴, 𝗽𝗹𝗲𝗮𝘀𝗲 𝘄𝗮𝗶𝘁... " },
       pageAccessToken
     );
 
@@ -56,13 +56,13 @@ module.exports = {
         responseMessage = `${textResponse}`;
       }
 
-      const responseTime = new Date().toLocaleString('en-US', { timeZone: 'Indian/Antananarivo', hour12: true });
+      const responseTime = new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila', hour12: true });
 
       // Final formatted response
-      const finalResponse = `
+      const finalResponse = `✨• 𝗚𝗲𝗺𝗶𝗻𝗶 𝗔𝗱𝘃𝗮𝗻𝗰𝗲𝗱 𝗔𝗜\n━━━━━━━━━━━━━━━━━━
 ${responseMessage}
 ━━━━━━━━━━━━━━━━━━
-📅 𝗗𝗮𝘁𝗲/𝗧𝗶𝗺𝗲: ${responseTime} *fb: Tsanta Rabe*`;
+📅 𝗗𝗮𝘁𝗲/𝗧𝗶𝗺𝗲: ${responseTime}`;
 
       await sendConcatenatedMessage(senderId, finalResponse, pageAccessToken);
 
