@@ -1,36 +1,32 @@
 const axios = require('axios');
+const { sendMessage } = require('../handles/sendMessage');
+
 module.exports = {
-  name: 'gpt4',
-  description: 'Ask a question to GPT-4',
-  author: 'Deku (rest api)',
-  async execute(senderId, args, pageAccessToken, sendMessage) {
-    const prompt = args.join( );
-    try {
-      const apiUrl = `https://deku-rest-apis.ooguy.com/gpt4?prompt=${encodeURIComponent(prompt)}&uid=100${senderId}`;
-      const response = await axios.get(apiUrl);
-      const text = response.data.gpt4;
+    name: 'gpt4',
+    description: 'Interact with GPT-4o',
+    usage: 'gpt4 [your message]',
+    author: 'coffee',
 
-      // Split the response into chunks if it exceeds 2000 characters
-      const maxMessageLength = 2000;
-      if (text.length > maxMessageLength) {
-        const messages = splitMessageIntoChunks(text, maxMessageLength);
-        for (const message of messages) {
-          sendMessage(senderId, { text: message }, pageAccessToken);
+    async execute(senderId, args, pageAccessToken) {
+        const prompt = args.join(' ');
+        if (!prompt) return sendMessage(senderId, { text: "Usage: gpt4 <question>" }, pageAccessToken);
+
+        try {
+            const { data: { response } } = await axios.get(`https://kaiz-apis.gleeze.com/api/gpt-4o?q=${encodeURIComponent(prompt)}&uid=${senderId}`);
+
+            const parts = [];
+
+            for (let i = 0; i < response.length; i += 1999) {
+                parts.push(response.substring(i, i + 1999));
+            }
+
+            // send all msg parts
+            for (const part of parts) {
+                await sendMessage(senderId, { text: part }, pageAccessToken);
+            }
+
+        } catch {
+            sendMessage(senderId, { text: 'There was an error generating the content. Please try again later.' }, pageAccessToken);
         }
-      } else {
-        sendMessage(senderId, { text }, pageAccessToken);
-      }
-    } catch (error) {
-      console.error('Error calling GPT-4 API:', error);
-      sendMessage(senderId, { text: 'Please Enter Your Valid Question?.' }, pageAccessToken);
     }
-  }
 };
-
-function splitMessageIntoChunks(message, chunkSize) {
-  const chunks = [];
-  for (let i = 0; i < message.length; i += chunkSize) {
-    chunks.push(message.slice(i, i + chunkSize));
-  }
-  return chunks;
-}
