@@ -63,15 +63,22 @@ async function fetchApiResponse(apiUrl, prompt, uid, imageUrl) {
  * Extrait une image d'un message auquel l'utilisateur a répondu.
  */
 async function extractImageFromEvent(event, pageAccessToken) {
+  if (!event || !event.message) {
+    return ""; // Retourne une chaîne vide si l'événement ou le message est inexistant
+  }
+
+  // Vérifie si l'utilisateur répond à un message contenant une image
   if (event.message.reply_to && event.message.reply_to.mid) {
     return await getImageFromMessage(event.message.reply_to.mid, pageAccessToken);
   }
-  if (event.message?.attachments && event.message.attachments[0]?.type === 'image') {
+
+  // Vérifie si une image est attachée directement au message
+  if (event.message.attachments && event.message.attachments[0]?.type === 'image') {
     return event.message.attachments[0].payload.url;
   }
+
   return "";
 }
-
 /**
  * Récupère l'URL d'une image à partir d'un message en réponse.
  */
