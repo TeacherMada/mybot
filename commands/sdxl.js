@@ -1,42 +1,51 @@
 const axios = require('axios');
 const { sendMessage } = require('../handles/sendMessage');
 
+// Define and export module
 module.exports = {
-  name: 'sdxl',
-  description: 'Generate an image using SDXL Realism.',
-  usage: 'sdxl [image prompt]',
-  author: 'tsanta',
+  // Metadata for the command
+  name: 'sdxl',  // Command name
+  description: 'Generates an image based on a prompt using FluxUltra AI',  // Description
+  usage: 'sdxl [prompt]',  // Usage
+  author: 'MakoyQx',  // Author of the command
 
+  // Main function that executes the command
   async execute(senderId, args, pageAccessToken) {
-    const prompt = args.join(' ').trim();
-    if (!prompt) {
-      return sendMessage(senderId, { text: '⚠️ Please provide an image prompt.' }, pageAccessToken);
+    // Check if prompt arguments are provided
+    if (!args || args.length === 0) {
+      // Send message requesting a prompt if missing
+      await sendMessage(senderId, {
+        text: '❌ 𝗣𝗹𝗲𝗮𝘀𝗲 𝗽𝗿𝗼𝘃𝗶𝗱𝗲 𝘆𝗼𝘂𝗿 𝗽𝗿𝗼𝗺𝗽𝘁\n\n𝗘𝘅𝗮𝗺𝗽𝗹𝗲: 𝗳𝗹𝘂𝘅𝘂𝗹𝘁𝗿𝗮 𝗰𝗶𝘁𝘆 𝗮𝘁 𝗻𝗶𝗴𝗵𝘁.'
+      }, pageAccessToken);
+      return;  // Exit the function if no prompt is provided
     }
 
-    const apiUrl = `https://zaikyoo-api.onrender.com/api/fluxultra?prompt=${encodeURIComponent(prompt)}`;
+    // Concatenate arguments to form the prompt
+    const prompt = args.join(' ');
+    const apiUrl = `https://zaikyoo-api.onrender.com/api/fluxultra?prompt=${encodeURIComponent(prompt)}`;  // API endpoint with the prompt
+
+    // Notify user that the image is being generated
+    await sendMessage(senderId, { text: '⌛ 𝗚𝗲𝗻𝗲𝗿𝗮𝘁𝗶𝗻𝗴 𝗶𝗺𝗮𝗴𝗲 𝗯𝗮𝘀𝗲𝗱 𝗼𝗻 𝘆𝗼𝘂𝗿 𝗽𝗿𝗼𝗺𝗽𝘁, 𝗽𝗹𝗲𝗮𝘀𝗲 𝘄𝗮𝗶𝘁...' }, pageAccessToken);
 
     try {
-      const response = await axios.get(apiUrl);
-
-      console.log("API Response:", response.data); // Debugging: affiche la réponse API
-
-      if (response.data && response.data.response) {
-        const imgUrl = response.data.response;
-
-        if (!imgUrl.startsWith('http')) {
-          throw new Error('Invalid image URL received.');
+      // Send the generated image to the user as an attachment
+      await sendMessage(senderId, {
+        attachment: {
+          type: 'image',
+          payload: {
+            url: apiUrl  // URL of the generated image
+          }
         }
-
-        await sendMessage(senderId, {
-          attachment: { type: 'image', payload: { url: imgUrl } }
-        }, pageAccessToken);
-      } else {
-        sendMessage(senderId, { text: '⚠️ The API did not return a valid image. Try again later.' }, pageAccessToken);
-      }
+      }, pageAccessToken);
 
     } catch (error) {
-      console.error('❌ Error generating image:', error.message || error);
-      sendMessage(senderId, { text: '❌ An error occurred while generating the image. Please try again later.' }, pageAccessToken);
+      // Handle and log any errors during image generation
+      console.error('Error generating image:', error);
+
+      // Notify user of the error
+      await sendMessage(senderId, {
+        text: 'An error occurred while generating the image. Please try again later.'
+      }, pageAccessToken);
     }
   }
 };
