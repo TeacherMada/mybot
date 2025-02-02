@@ -18,11 +18,11 @@ module.exports = {
     try {
       const response = await axios.get(apiUrl);
 
-      // Vérifier que la réponse contient bien une image
-      if (response.data && response.data.status && response.data.response) {
+      console.log("API Response:", response.data); // Debugging: affiche la réponse API
+
+      if (response.data && response.data.response) {
         const imgUrl = response.data.response;
 
-        // Vérifier si l'URL retournée est valide
         if (!imgUrl.startsWith('http')) {
           throw new Error('Invalid image URL received.');
         }
@@ -31,7 +31,7 @@ module.exports = {
           attachment: { type: 'image', payload: { url: imgUrl } }
         }, pageAccessToken);
       } else {
-        throw new Error('Invalid API response format.');
+        sendMessage(senderId, { text: '⚠️ The API did not return a valid image. Try again later.' }, pageAccessToken);
       }
 
     } catch (error) {
