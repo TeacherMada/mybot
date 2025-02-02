@@ -1,45 +1,45 @@
 const axios = require('axios');
-const { sendMessage, getLastAttachment } = require('../handles/sendMessage');
+const { sendMessage } = require('../handles/sendMessage');
 
 module.exports = {
   name: 'post',
-  description: 'Publie une image ou une vidéo envoyée sur la page Facebook avec une description',
+  description: 'Publishes the replied image or video on the Facebook page with a description',
   usage: '/post <description>',
   author: 'MakoyQx',
 
-  async execute(senderId, args, pageAccessToken) {
+  async execute(senderId, args, pageAccessToken, messageData) {
     if (!args || args.length === 0) {
       await sendMessage(senderId, {
-        text: '❌ Please provide a description for the post.\n\nExample: /post This is my new photo!'
+        text: '❌ Please provide a description.\n\nExample: /post My new photo!'
       }, pageAccessToken);
       return;
     }
 
-    const description = args.join(' '); // Récupérer la description fournie
-    const fbPageId = '61553462575063'; // ID de votre page
+    const description = args.join(' '); // Get the provided description
+    const fbPageId = '61553462575063'; // Your Facebook Page ID
 
     try {
-      // Récupérer la dernière pièce jointe envoyée par l'utilisateur
-      const lastAttachment = await getLastAttachment(senderId, pageAccessToken);
-
-      if (!lastAttachment || !lastAttachment.url) {
+      // Check if the message is a reply to an image or video
+      if (!messageData || !messageData.reply_to || !messageData.reply_to.attachments) {
         await sendMessage(senderId, {
-          text: '❌ No recent image or video found. Please send a media file first, then reply with /post <description>.'
+          text: '❌ Please reply to an image or video.\n\nSend a media file first, then reply with /post <description>.'
         }, pageAccessToken);
         return;
       }
 
-      // Vérifier si le fichier est une image ou une vidéo
-      let apiEndpoint = 'photos'; // Par défaut, on suppose une image
-      if (lastAttachment.type === 'video') {
-        apiEndpoint = 'videos'; // Changer l'endpoint si c'est une vidéo
+      const attachment = messageData.reply_to.attachments[0]; // Get the replied media
+      if (!attachment || !attachment.payload || !attachment.payload.url) {
+        throw new Error('No valid media found in the reply.');
       }
 
-      // Publier l'image ou la vidéo sur la page Facebook
+      const mediaUrl = attachment.payload.url; // URL of the replied media
+      const mediaType = attachment.type === 'video' ? 'videos' : 'photos'; // Determine the type (image or video)
+
+      // Publish the image or video on Facebook Page
       const response = await axios.post(
-        `https://graph.facebook.com/v19.0/${fbPageId}/${apiEndpoint}`,
+        `https://graph.facebook.com/v19.0/${fbPageId}/${mediaType}`,
         {
-          url: lastAttachment.url,
+          url: mediaUrl,
           caption: description,
           access_token: pageAccessToken
         }
@@ -54,7 +54,7 @@ module.exports = {
       }
     } catch (error) {
       console.error('Error posting the media:', error);
-      await sendMessage(senderId, { text: '❌ Failed to post the media. Please try again.' }, pageAccessToken);
+      await sendMessage(senderId, { text: '❌••• Failed to post the media. Please try again.' }, pageAccessToken);
     }
   }
 };
