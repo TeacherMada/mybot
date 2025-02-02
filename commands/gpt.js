@@ -17,11 +17,11 @@ module.exports = {
       const apiUrl = `https://zaikyoo-api.onrender.com/api/4ov2?prompt=${encodeURIComponent(prompt)}&uid=${senderId}`;
       const { data } = await axios.get(apiUrl);
 
-      if (!data || !data.gemini) {
+      if (!data || !data.reply) {
         throw new Error("Réponse invalide de l'API.");
       }
 
-      sendMessage(senderId, { text: data.gemini }, pageAccessToken);
+      sendMessage(senderId, { text: data.reply }, pageAccessToken);
       
     } catch (error) {
       console.error("Erreur dans la commande GPT :", error);
