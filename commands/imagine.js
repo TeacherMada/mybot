@@ -2,16 +2,16 @@ const axios = require('axios');
 const { sendMessage } = require('../handles/sendMessage');
 
 module.exports = {
-  name: 'Imagine',
+  name: 'dalle',
   description: 'Generate an image using Flux Realism API.',
-  usage: '-flux [image prompt]',
+  usage: 'dzlle [image prompt]',
   author: 'coffee',
 
   async execute(senderId, args, pageAccessToken) {
     const prompt = args.join(' ').trim();
     if (!prompt) return sendMessage(senderId, { text: 'Provide an image prompt.' }, pageAccessToken);
 
-    const apiUrl = `https://api.kenliejugarap.com/flux-realism/?prompt=${encodeURIComponent(prompt)}`;
+    const apiUrl = `https://zaikyoo-api.onrender.com/api/dalle3?prompt=${encodeURIComponent(prompt)}`;
 
     try {
       const response = await axios.get(apiUrl);
