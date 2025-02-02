@@ -2,9 +2,9 @@ const axios = require('axios');
 const { sendMessage } = require('../handles/sendMessage');
 
 module.exports = {
-  name: 'gpt',
-  description: 'Interact with GPT-4o',
-  usage: 'gpt [your message]',
+  name: 'gpt4',
+  description: 'chatme direct with GPT-4o',
+  usage: 'chatme direct',
   author: 'tsanta',
 
   async execute(senderId, args, pageAccessToken) {
