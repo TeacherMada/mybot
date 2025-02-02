@@ -2,24 +2,23 @@ const axios = require("axios");
 const { sendMessage } = require('../handles/sendMessage');
 
 module.exports = {
-  name: "newai",
+  name: "zaikyoo",
   description: "Interagit avec l'API Zaikyoo pour répondre aux questions et traiter les images",
   author: "Refonte par Metallic ChromeV2",
 
   async execute(senderId, args, pageAccessToken, event, imageUrl) {
     const userPrompt = args.join(" ");
 
-    // Vérifie si une question ou une image a été fournie
     if (!userPrompt && !imageUrl) {
       return sendMessage(senderId, { 
         text: "❌ Veuillez fournir une question ou une image avec une description."
       }, pageAccessToken);
     }
 
-    sendMessage(senderId, { text: "⌛ Traitement en cours, veuillez patienter..." }, pageAccessToken);
+    sendMessage(senderId, { text: "⌛ Traitement en cours, veuillez patienter...⏰" }, pageAccessToken);
 
     try {
-      // Vérifie si une image a été jointe dans la conversation
+      // Vérification de l'image jointe dans la conversation
       if (!imageUrl) {
         imageUrl = await extractImageFromEvent(event, pageAccessToken);
       }
@@ -27,6 +26,12 @@ module.exports = {
       // Appel de l'API Zaikyoo
       const apiUrl = `https://zaikyoo-api.onrender.com/api/4ov2`;
       const response = await fetchApiResponse(apiUrl, userPrompt, senderId, imageUrl);
+
+      // Vérifier si la réponse est bien une chaîne
+      if (typeof response !== "string") {
+        console.error("Réponse invalide de l'API :", response);
+        return sendMessage(senderId, { text: "❌ Erreur : réponse invalide de l'API." }, pageAccessToken);
+      }
 
       // Vérifie si la réponse contient une image générée
       if (response.includes('TOOL_CALL: generateImage')) {
@@ -55,17 +60,29 @@ module.exports = {
  * Effectue un appel à l'API et retourne la réponse.
  */
 async function fetchApiResponse(apiUrl, prompt, uid, imageUrl) {
-  const { data } = await axios.get(apiUrl, { params: { prompt, uid, img: imageUrl || "" } });
-  return data;
+  try {
+    const { data } = await axios.get(apiUrl, { params: { prompt, uid, img: imageUrl || "" } });
+
+    // Vérifie si la réponse contient un texte ou un objet
+    if (typeof data === "object" && data.response) {
+      return data.response; // Si l'API retourne un objet avec une clé "response"
+    } else if (typeof data === "string") {
+      return data; // Si la réponse est directement une chaîne
+    } else {
+      console.error("Réponse inattendue de l'API :", data);
+      return "❌ Réponse inattendue de l'API.";
+    }
+  } catch (error) {
+    console.error("Erreur lors de l'appel API :", error);
+    return `❌ Erreur API : ${error.message}`;
+  }
 }
 
 /**
  * Extrait une image d'un message auquel l'utilisateur a répondu.
  */
 async function extractImageFromEvent(event, pageAccessToken) {
-  if (!event || !event.message) {
-    return ""; // Retourne une chaîne vide si l'événement ou le message est inexistant
-  }
+  if (!event || !event.message) return ""; 
 
   // Vérifie si l'utilisateur répond à un message contenant une image
   if (event.message.reply_to && event.message.reply_to.mid) {
@@ -79,14 +96,20 @@ async function extractImageFromEvent(event, pageAccessToken) {
 
   return "";
 }
+
 /**
  * Récupère l'URL d'une image à partir d'un message en réponse.
  */
 async function getImageFromMessage(mid, pageAccessToken) {
-  const { data } = await axios.get(`https://graph.facebook.com/v21.0/${mid}/attachments`, {
-    params: { access_token: pageAccessToken }
-  });
-  return data?.data?.[0]?.image_data?.url || "";
+  try {
+    const { data } = await axios.get(`https://graph.facebook.com/v21.0/${mid}/attachments`, {
+      params: { access_token: pageAccessToken }
+    });
+    return data?.data?.[0]?.image_data?.url || "";
+  } catch (error) {
+    console.error("Erreur lors de la récupération de l'image :", error);
+    return "";
+  }
 }
 
 /**
