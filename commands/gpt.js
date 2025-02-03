@@ -25,7 +25,7 @@ module.exports = {
       
     } catch (error) {
       console.error("Erreur dans la commande GPT :", error);
-      sendMessage(senderId, { text: 'Erreur lors de la génération de la réponse. Réessayez plus tard.' }, pageAccessToken);
+      sendMessage(senderId, { text: '•••Erreur lors de la génération de la réponse. Réessayez plus tard.' }, pageAccessToken);
     }
   }
 };
