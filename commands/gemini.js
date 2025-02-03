@@ -10,15 +10,17 @@ module.exports = {
   async execute(senderId, args, pageAccessToken, event, imageUrl) {
     const userPrompt = args.join(" ").trim();
 
+    // Vérification si une image a été envoyée
     if (!userPrompt && !imageUrl && !getAttachmentUrl(event)) {
       return sendMessage(senderId, { text: "❌ Veuillez envoyer une image ou poser une question." }, pageAccessToken);
     }
 
+    // Récupération de l'URL de l'image si disponible
     if (!imageUrl) {
       imageUrl = getAttachmentUrl(event) || (await getRepliedImage(event, pageAccessToken));
     }
 
-    // Vérifier si l'image a une URL valide
+    // Vérification et correction de l'URL d'image
     if (imageUrl && !/^https?:\/\//.test(imageUrl)) {
       console.warn("⚠️ URL d'image invalide détectée :", imageUrl);
       imageUrl = "";
@@ -26,13 +28,10 @@ module.exports = {
 
     try {
       const apiUrl = `http://sgp1.hmvhostings.com:25721/geminiv`;
-      const query = {
-        prompt: userPrompt || "Réponds à toutes les questions nécessaires.",
-      };
 
-      if (imageUrl) {
-        query.image_url = imageUrl; // Ajouter seulement si une image est disponible
-      }
+      // Création des paramètres à envoyer
+      const query = { prompt: userPrompt || "Réponds à toutes les questions nécessaires." };
+      if (imageUrl) query.image_url = imageUrl; // Ajouter uniquement si l'image est valide
 
       console.log("🔍 Requête envoyée à l'API :", apiUrl, query);
 
@@ -41,15 +40,16 @@ module.exports = {
       console.log("✅ Réponse API :", data);
 
       if (!data || !data.response) {
-        return sendMessage(senderId, { text: "❌ Impossible de traiter votre demande." }, pageAccessToken);
+        return sendMessage(senderId, { text: "❌ Réponse invalide de l'API." }, pageAccessToken);
       }
 
       await sendMessage(senderId, { text: data.response }, pageAccessToken);
 
     } catch (error) {
       console.error("❌ Erreur API :", error.response?.data || error.message || error);
+      const errorMsg = error.response?.data?.detail || error.message || "Erreur inconnue.";
       await sendMessage(senderId, {
-        text: `❌ Une erreur est survenue : ${error.message}`
+        text: `❌ Une erreur est survenue : ${errorMsg}`
       }, pageAccessToken);
     }
   }
