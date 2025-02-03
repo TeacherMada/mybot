@@ -10,46 +10,40 @@ module.exports = {
   async execute(senderId, args, pageAccessToken, event, imageUrl) {
     const userPrompt = args.join(" ").trim();
 
-    // Vérification si une image a été envoyée
+    // Vérifie si une question ou une image est fournie
     if (!userPrompt && !imageUrl && !getAttachmentUrl(event)) {
       return sendMessage(senderId, { text: "❌ Veuillez envoyer une image ou poser une question." }, pageAccessToken);
     }
 
-    // Récupération de l'URL de l'image si disponible
+    // Récupère l'image si elle est attachée ou envoyée en réponse
     if (!imageUrl) {
       imageUrl = getAttachmentUrl(event) || (await getRepliedImage(event, pageAccessToken));
     }
 
-    // Vérification et correction de l'URL d'image
-    if (imageUrl && !/^https?:\/\//.test(imageUrl)) {
-      console.warn("⚠️ URL d'image invalide détectée :", imageUrl);
-      imageUrl = "";
-    }
-
     try {
+      // Nouvelle API
       const apiUrl = `http://sgp1.hmvhostings.com:25721/geminiv`;
+      const query = {
+        prompt: userPrompt || "Réponds à toutes les questions nécessaires.",
+        image_url: imageUrl || ""
+      };
 
-      // Création des paramètres à envoyer
-      const query = { prompt: userPrompt || "Réponds à toutes les questions nécessaires." };
-      if (imageUrl) query.image_url = imageUrl; // Ajouter uniquement si l'image est valide
-
-      console.log("🔍 Requête envoyée à l'API :", apiUrl, query);
+      console.log("🔍 Requête envoyée à l'API :", apiUrl, query); // Debugging
 
       const { data } = await axios.get(apiUrl, { params: query });
 
-      console.log("✅ Réponse API :", data);
+      console.log("✅ Réponse API :", data); // Affiche la réponse de l'API
 
       if (!data || !data.response) {
-        return sendMessage(senderId, { text: "❌ Réponse invalide de l'API." }, pageAccessToken);
+        return sendMessage(senderId, { text: "❌ Impossible de traiter votre demande." }, pageAccessToken);
       }
 
       await sendMessage(senderId, { text: data.response }, pageAccessToken);
 
     } catch (error) {
       console.error("❌ Erreur API :", error.response?.data || error.message || error);
-      const errorMsg = error.response?.data?.detail || error.message || "Erreur inconnue.";
       await sendMessage(senderId, {
-        text: `❌ Une erreur est survenue : ${errorMsg}`
+        text: `❌ Une erreur est survenue : ${error.message}`
       }, pageAccessToken);
     }
   }
