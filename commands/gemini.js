@@ -3,110 +3,74 @@ const { sendMessage } = require('../handles/sendMessage');
 
 module.exports = {
   name: "gemini",
-  description: "interact to gemini 1.5 flash vision",
-  author: "remodel by metallic chromev2 ",
+  description: "Analyse une image ou répond à une question.",
+  usage: "gemini <question> | Répondre à une image",
+  author: "developer",
 
   async execute(senderId, args, pageAccessToken, event, imageUrl) {
-    const userPrompt = args.join(" ");
+    const userPrompt = args.join(" ").trim();
 
-    if (!userPrompt && !imageUrl) {
-      return sendMessage(senderId, { 
-        text: `❌ 𝗣𝗿𝗼𝘃𝗶𝗱𝗲𝗱 𝘆𝗼𝘂𝗿 𝗾𝘂𝗲𝘀𝘁𝗶𝗼𝗻 𝗼𝗿 𝗶𝗺𝗮𝗴𝗲 𝗮𝗻𝗱 𝘁𝘆𝗽𝗲 𝘆𝗼𝘂𝗿 𝗱𝗲𝘀𝗰𝗿𝗶𝗽𝘁𝗶𝗼𝗻 𝘁𝗼 𝗿𝗲𝗰𝗼𝗴𝗻𝗶𝘇𝗲...` 
+    // Vérifie si une question ou une image est fournie
+    if (!userPrompt && !imageUrl && !getAttachmentUrl(event)) {
+      return sendMessage(senderId, {
+        text: "❌ Veuillez envoyer une image ou poser une question."
       }, pageAccessToken);
     }
 
-    sendMessage(senderId, { text: "⌛ 𝗔𝗻𝘀𝘄𝗲𝗿𝗶𝗻𝗴 𝘆𝗼𝘂𝗿 𝗾𝘂𝗲𝘀𝘁𝗶𝗼𝗻 𝗽𝗹𝗲𝗮𝘀𝗲 𝘄𝗮𝗶𝘁 𝗮 𝗺𝗼𝗺𝗲𝗻𝘁.." }, pageAccessToken);
+    // Vérifie et récupère l'image attachée ou en réponse
+    if (!imageUrl) {
+      imageUrl = getAttachmentUrl(event) || (await getRepliedImage(event, pageAccessToken));
+    }
 
     try {
-      if (!imageUrl) {
-        if (event.message.reply_to && event.message.reply_to.mid) {
-          imageUrl = await getRepliedImage(event.message.reply_to.mid, pageAccessToken);
-        } else if (event.message?.attachments && event.message.attachments[0]?.type === 'image') {
-          imageUrl = event.message.attachments[0].payload.url;
-        }
+      // Nouvelle API à utiliser
+      const apiUrl = `http://sgp1.hmvhostings.com:25721/geminiv`;
+      const query = {
+        prompt: userPrompt || "Réponds à toutes les questions nécessaires.",
+        image_url: imageUrl || ""
+      };
+
+      const { data } = await axios.get(apiUrl, { params: query });
+
+      if (!data || !data.response) {
+        return sendMessage(senderId, {
+          text: "❌ Impossible de traiter votre demande."
+        }, pageAccessToken);
       }
 
-      // Use both APIs
-      const apiUrlGemini = `https://joshweb.click/gemini`;
-      const apiUrlGpt4o = `https://appjonellccapis.zapto.org/api/gpt4o-v2`;
-
-      const responseGemini = await handleImageRecognition(apiUrlGemini, userPrompt, imageUrl);
-      const responseGpt4o = await handleImageRecognition(apiUrlGpt4o, userPrompt, imageUrl);
-
-      const result = responseGpt4o.gemini || responseGemini.gemini; // Prioritize response from the new API
-
-      // Check for image generation
-      if (result.includes('TOOL_CALL: generateImage')) {
-        const imageUrlMatch = result.match(/\!\[.*?\]\((https:\/\/.*?)\)/);
-        if (imageUrlMatch && imageUrlMatch[1]) {
-          const generatedImageUrl = imageUrlMatch[1];
-          await sendMessage(senderId, {
-            attachment: {
-              type: 'image',
-              payload: { url: generatedImageUrl }
-            }
-          }, pageAccessToken);
-        }
-      }
-
-      // Get the current response time in Manila timezone
-      const responseTime = new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila', hour12: true });
-
-      // Format the response message
-      const message = `𝗚𝗲𝗺𝗶𝗻𝗶 1.5 𝗙𝗹𝗮𝘀𝗵 𝗩𝗶𝘀𝗶𝗼𝗻 ♊\n━━━━━━━━━━━━━━━━━━
-${result}━━━━━━━━━━━━━━━━━━\n⏰ 𝗥𝗲𝘀𝗽𝗼𝗻𝘀𝗲 𝗧𝗶𝗺𝗲: ${responseTime}`;
-
-      await sendConcatenatedMessage(senderId, message, pageAccessToken);
+      await sendMessage(senderId, { text: data.response }, pageAccessToken);
 
     } catch (error) {
-      console.error("Error in Gemini command:", error);
-      sendMessage(senderId, { text: `Error: ${error.message || "Something went wrong."}` }, pageAccessToken);
+      console.error("Erreur:", error.message || error);
+      await sendMessage(senderId, {
+        text: "❌ Une erreur est survenue."
+      }, pageAccessToken);
     }
   }
 };
 
-async function handleImageRecognition(apiUrl, prompt, imageUrl) {
-  const { data } = await axios.get(apiUrl, {
-    params: {
-      prompt,
-      url: imageUrl || ""
+/**
+ * Extrait l'URL d'une image attachée dans le message.
+ */
+function getAttachmentUrl(event) {
+  const attachment = event.message?.attachments?.[0];
+  return attachment?.type === "image" ? attachment.payload.url : null;
+}
+
+/**
+ * Récupère l'URL d'une image envoyée en réponse à un message.
+ */
+async function getRepliedImage(event, pageAccessToken) {
+  if (event.message?.reply_to?.mid) {
+    try {
+      const { data } = await axios.get(`https://graph.facebook.com/v21.0/${event.message.reply_to.mid}/attachments`, {
+        params: { access_token: pageAccessToken }
+      });
+      return data?.data?.[0]?.image_data?.url || null;
+    } catch (error) {
+      console.error("Erreur lors de la récupération de l'image :", error.message || error);
+      return null;
     }
-  });
-
-  return data;
-}
-
-async function getRepliedImage(mid, pageAccessToken) {
-  const { data } = await axios.get(`https://graph.facebook.com/v21.0/${mid}/attachments`, {
-    params: { access_token: pageAccessToken }
-  });
-
-  if (data && data.data.length > 0 && data.data[0].image_data) {
-    return data.data[0].image_data.url;
-  } else {
-    return "";
   }
-}
-
-async function sendConcatenatedMessage(senderId, text, pageAccessToken) {
-  const maxMessageLength = 2000;
-
-  if (text.length > maxMessageLength) {
-    const messages = splitMessageIntoChunks(text, maxMessageLength);
-
-    for (const message of messages) {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      await sendMessage(senderId, { text: message }, pageAccessToken);
-    }
-  } else {
-    await sendMessage(senderId, { text }, pageAccessToken);
-  }
-}
-
-function splitMessageIntoChunks(message, chunkSize) {
-  const chunks = [];
-  for (let i = 0; i < message.length; i += chunkSize) {
-    chunks.push(message.slice(i, i + chunkSize));
-  }
-  return chunks;
+  return null;
 }
