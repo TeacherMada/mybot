@@ -14,7 +14,7 @@ module.exports = {
     }
 
     try {
-      const apiUrl = `http://sgp1.hmvhostings.com:25721/gemini?question=${encodeURIComponent(prompt)}&uid=${senderId}`;
+      const apiUrl = `https://zetbot-page.onrender.com/api/gemini?prompt=${encodeURIComponent(prompt)}&uid=${senderId}`;
       const { data } = await axios.get(apiUrl);
 
       if (!data || !data.reply) {
