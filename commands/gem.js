@@ -14,49 +14,31 @@ module.exports = {
 
   async execute(senderId, args, pageAccessToken) {
     const prompt = args.join(' ').trim();
-
-    // Check if there is an image URL stored for the sender
     const imageData = JSON.parse(fs.readFileSync(imageFilePath, 'utf8')) || {};
+    const imgUrl = imageData[senderId] || '';
 
-    if (imageData[senderId] && prompt) {
-      // If there is an image URL and a user-provided query, use the "vision" endpoint for recognition
-      const imgUrl = imageData[senderId];
-      try {
-        const visionResponse = await axios.get(`https://jerome-web.onrender.com/service/api/gemini?ask=${encodeURIComponent(prompt)}&imgurl=${encodeURIComponent(imgUrl)}`);
+    try {
+      // Construire l'URL de l'API
+      const apiUrl = `https://zaikyoo-api.onrender.com/api/gemini-2-0-exp?prompt=${encodeURIComponent(prompt)}&uid=${senderId}&img=${encodeURIComponent(imgUrl)}`;
 
-        if (visionResponse.data && visionResponse.data.vision) {
-          // Send the vision response to the user
-          await sendMessage(senderId, { text: visionResponse.data.vision }, pageAccessToken);
-        } else {
-          await sendMessage(senderId, { text: 'Failed to recognize the image. Please try again later.' }, pageAccessToken);
-        }
-      } catch (error) {
-        console.error('Error recognizing the image:', error);
-        await sendMessage(senderId, { text: 'An error occurred while recognizing the image. Please try again later.' }, pageAccessToken);
-      } finally {
-        // Remove the entry from image.json after processing
+      // Appel API
+      const response = await axios.get(apiUrl);
+
+      if (response.data && response.data.message) {
+        await sendMessage(senderId, { text: `🤖| ${response.data.message}` }, pageAccessToken);
+      } else {
+        await sendMessage(senderId, { text: "⚠️ Je n'ai pas pu générer de réponse. Réessayez plus tard." }, pageAccessToken);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      await sendMessage(senderId, { text: "❌ Une erreur s'est produite. Réessayez plus tard." }, pageAccessToken);
+    } finally {
+      // Nettoyer l’image stockée après utilisation
+      if (imgUrl) {
         delete imageData[senderId];
         fs.writeFileSync(imageFilePath, JSON.stringify(imageData, null, 2), 'utf8');
-        console.log(`Removed stored image URL for user ${senderId}`);
+        console.log(`Image supprimée pour l'utilisateur ${senderId}`);
       }
-    } else if (!imageData[senderId] && prompt) {
-      // If there is no image URL stored, proceed with the text-only response
-      try {
-        const textResponse = await axios.get(`https://jerome-web.onrender.com/service/api/gemini?ask=${encodeURIComponent(prompt)}&imgurl=`);
-
-        if (textResponse.data && textResponse.data.textResponse) {
-          // Send the text response to the user
-          await sendMessage(senderId, { text: textResponse.data.textResponse }, pageAccessToken);
-        } else {
-          await sendMessage(senderId, { text: 'Failed to generate a response. Please try again later.' }, pageAccessToken);
-        }
-      } catch (error) {
-        console.error('Error generating text response:', error);
-        await sendMessage(senderId, { text: 'An error occurred while generating a response. Please try again later.' }, pageAccessToken);
-      }
-    } else {
-      // If no prompt is provided and there is no stored image URL
-      await sendMessage(senderId, { text: "Usage: gemini <your query> or send an image for recognition" }, pageAccessToken);
     }
   }
 };
