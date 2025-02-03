@@ -15,7 +15,7 @@ module.exports = {
 
     try {
       // URL corrigée avec le bon endpoint
-      const apiUrl = `https://zetbot-page.onrender.com/api/gemini?prompt=${encodeURIComponent(prompt)}&uid=${senderId}`;
+      const apiUrl = `https://kaiz-apis.gleeze.com/api/gpt-4o-pro?ask=${encodeURIComponent(prompt)}&uid=${senderId}`;
       
       const { data } = await axios.get(apiUrl);
 
