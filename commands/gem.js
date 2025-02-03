@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 
 // Path to the stored image data
-const imageFilePath = path.join(__dirname, '../data/image.json');
+const imageFilePath = path.join(__dirname, '../data/Image.json');
 
 module.exports = {
   name: 'gem',
