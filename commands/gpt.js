@@ -14,18 +14,22 @@ module.exports = {
     }
 
     try {
+      // URL corrigée avec le bon endpoint
       const apiUrl = `https://zetbot-page.onrender.com/api/gemini?prompt=${encodeURIComponent(prompt)}&uid=${senderId}`;
+      
       const { data } = await axios.get(apiUrl);
 
-      if (!data || !data.reply) {
-        throw new Error("Réponse invalide de l'API.");
+      // Vérifiez la structure de la réponse ici
+      if (!data?.reply) {
+        throw new Error(`Réponse inattendue : ${JSON.stringify(data)}`);
       }
 
       sendMessage(senderId, { text: data.reply }, pageAccessToken);
       
     } catch (error) {
-      console.error("Erreur dans la commande GPT :", error);
-      sendMessage(senderId, { text: '•••Erreur lors de la génération de la réponse. Réessayez plus tard.' }, pageAccessToken);
+      // Log détaillé
+      console.error("Erreur API:", error.response?.data || error.message);
+      sendMessage(senderId, { text: 'Erreur : réponse non générée' }, pageAccessToken);
     }
   }
 };
