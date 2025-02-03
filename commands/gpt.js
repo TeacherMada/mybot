@@ -14,7 +14,7 @@ module.exports = {
     }
 
     try {
-      const apiUrl = `https://zaikyoo-api.onrender.com/api/4ov2?prompt=${encodeURIComponent(prompt)}&uid=${senderId}`;
+      const apiUrl = `http://sgp1.hmvhostings.com:25721/gemini?question=${encodeURIComponent(prompt)}&uid=${senderId}`;
       const { data } = await axios.get(apiUrl);
 
       if (!data || !data.reply) {
