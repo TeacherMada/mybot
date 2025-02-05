@@ -3,13 +3,13 @@ const { sendMessage } = require('../handles/sendMessage');
 
 module.exports = {
   name: 'flux',
-  description: 'Generate an image using Flux Realism API.',
+  description: 'Génère une image via l\'API Flux Realism.',
   usage: 'flux [@{model}] [image prompt]',
   author: 'coffee',
 
   async execute(senderId, args, pageAccessToken) {
     if (!args.length) {
-      return sendMessage(senderId, { text: 'Provide an image prompt.' }, pageAccessToken);
+      return sendMessage(senderId, { text: 'Veuillez fournir un prompt pour l\'image.' }, pageAccessToken);
     }
 
     // Extraire le modèle si spécifié avec @
@@ -23,8 +23,11 @@ module.exports = {
     }
 
     if (!prompt) {
-      return sendMessage(senderId, { text: 'Provide a valid image prompt.' }, pageAccessToken);
+      return sendMessage(senderId, { text: 'Veuillez fournir un prompt valide pour l\'image.' }, pageAccessToken);
     }
+
+    // Informer l'utilisateur d'attendre pendant le traitement de la demande
+    await sendMessage(senderId, { text: 'Attendez svp, nous traitons votre demande...' }, pageAccessToken);
 
     const apiUrl = `https://api.zetsu.xyz/api/flux?prompt=${encodeURIComponent(prompt)}&model=${model}`;
 
@@ -34,11 +37,11 @@ module.exports = {
         const imgUrl = response.data.response;
         await sendMessage(senderId, { attachment: { type: 'image', payload: { url: imgUrl } } }, pageAccessToken);
       } else {
-        sendMessage(senderId, { text: 'Failed to generate image using Flux Realism API.' }, pageAccessToken);
+        sendMessage(senderId, { text: 'Échec de la génération de l\'image via l\'API Flux Realism.' }, pageAccessToken);
       }
     } catch (error) {
-      console.error('Error generating image:', error);
-      sendMessage(senderId, { text: 'An error occurred while generating the image.' }, pageAccessToken);
+      console.error('Erreur lors de la génération de l\'image:', error);
+      sendMessage(senderId, { text: 'Une erreur est survenue lors de la génération de l\'image.' }, pageAccessToken);
     }
   }
 };
