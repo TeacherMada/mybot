@@ -12,21 +12,22 @@ module.exports = {
       return sendMessage(senderId, { text: 'Veuillez fournir un prompt pour l\'image.' }, pageAccessToken);
     }
 
-    // Extraire le modèle si spécifié avec @
-    let model = 4; // Modèle par défaut
+    // Définir le modèle par défaut
+    let model = 4;
     let prompt = args.join(' ').trim();
-    const modelMatch = prompt.match(/@(\d+)/);
 
+    // Vérifier si un modèle est spécifié avec la syntaxe "@{model}"
+    const modelMatch = prompt.match(/@(\d+)/);
     if (modelMatch) {
-      model = modelMatch[1]; // Extraire le numéro du modèle
-      prompt = prompt.replace(modelMatch[0], '').trim(); // Supprimer le @model du prompt
+      model = modelMatch[1]; // Utiliser le modèle fourni
+      prompt = prompt.replace(modelMatch[0], '').trim(); // Retirer la mention du modèle du prompt
     }
 
     if (!prompt) {
       return sendMessage(senderId, { text: 'Veuillez fournir un prompt valide pour l\'image.' }, pageAccessToken);
     }
 
-    // Informer l'utilisateur d'attendre pendant le traitement de la demande
+    // Informer l'utilisateur que la demande est en cours de traitement
     await sendMessage(senderId, { text: 'Attendez svp, nous traitons votre demande...' }, pageAccessToken);
 
     const apiUrl = `https://api.zetsu.xyz/api/flux?prompt=${encodeURIComponent(prompt)}&model=${model}`;
