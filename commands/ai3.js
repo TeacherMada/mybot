@@ -39,7 +39,7 @@ module.exports = {
                 responseText = chatCompletion.choices[0].message.content;
             } else {
                 // Utilisation de l'API Gemini (comme dans ton code original)
-                const { data: { response } } = await axios.get(`https://gemini-yvcl.onrender.com/api/ai/chat?prompt=${encodeURIComponent(prompt)}&id=${senderId}`);
+                const { data: { response } } = await axios.get(`https://XXXgemini-yvcl.onrender.com/api/ai/chat?prompt=${encodeURIComponent(prompt)}&id=${senderId}`);
                 responseText = response;
             }
 
