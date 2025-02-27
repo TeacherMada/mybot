@@ -16,7 +16,7 @@ module.exports = {
     await sendMessage(senderId, { text: 'Removing background from the image, please wait... 🖼️' }, pageAccessToken);
 
     try {
-      const removeBgUrl = `https://appjonellccapis.zapto.org/api/removebg?url=${encodeURIComponent(imageUrl)}`;
+      const removeBgUrl = `https://kaiz-apis.gleeze.com/api/removebg?url=${encodeURIComponent(imageUrl)}`;
 
       await sendMessage(senderId, {
         attachment: {
