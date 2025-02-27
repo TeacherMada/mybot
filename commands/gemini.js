@@ -2,7 +2,7 @@ const axios = require('axios');
 const { sendMessage } = require('../handles/sendMessage');
 
 module.exports = {
-    name: 'genai',
+    name: 'ai',
     description: 'Interact with GPT-4 Turbo',
     usage: 'ai [your message]',
     author: 'coffee',
@@ -12,7 +12,7 @@ module.exports = {
         if (!prompt) return sendMessage(senderId, { text: "Usage: ai <question>" }, pageAccessToken);
 
         try {
-            const apiUrl = `https://tsantabot-rest-api.onrender.com/api/unlimited-ai?model=gpt-4-turbo-2024-04-09&system=You are a helpful assistant&question=${encodeURIComponent(prompt)}`;
+            const apiUrl = `https://zetbot-page.onrender.com/api/unlimited-ai?model=gpt-4-turbo-2024-04-09&system=You are a helpful assistant&question=${encodeURIComponent(prompt)}`;
             const { data } = await axios.get(apiUrl);
 
             // Supposons que la réponse de l'API est directement le texte (ajustez si la structure diffère)
