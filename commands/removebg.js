@@ -21,7 +21,7 @@ module.exports = {
     // Si aucune image n'est trouvée
     if (!imageUrl) {
       return sendMessage(senderId, {
-        text: 'Please send an image first or reply to a message containing an image with "removebg" to remove its background.'
+        text: '🙏Please send an image first or reply to a message containing an image with "removebg" to remove its background.'
       }, pageAccessToken);
     }
 
