@@ -1,49 +1,44 @@
-const axios = require("axios");
-const { sendMessage } = require("../handles/sendMessage");
+const axios = require('axios');
+const { sendMessage } = require('../handles/sendMessage');
 
 module.exports = {
-  name: "zombie",
-  description: "Apply a zombie filter to your picture",
-  author: "tsanta",
-  usage: "Send any picture first then reply zompic",
+  name: 'zombie',
+  description: 'Transforme une image en style zombie',
+  usage: 'zombie [URL de l’image]',
+  author: 'tsanta',
 
-  async execute(senderId, args, pageAccessToken, imageUrl) {
-    // Vérifie si une URL d'image est fournie
-    if (!imageUrl) {
-      return sendMessage(senderId, {
-        text: `❌ Please send an image first, then reply "zompic" to apply the zombie filter.`
+  async execute(senderId, args, pageAccessToken) {
+    // Vérifier si une URL d'image est fournie
+    if (!args || args.length === 0) {
+      await sendMessage(senderId, {
+        text: '❌ Veuillez fournir une URL d’image.\n\n𝗘𝘅𝗮𝗺𝗽𝗹𝗲: zombie https://exemple.com/image.jpg'
       }, pageAccessToken);
+      return;
     }
 
-    // Notifie l'utilisateur que le traitement est en cours
-    await sendMessage(senderId, { text: "⌛ Applying zombie filter, please wait..." }, pageAccessToken);
+    // Récupérer l'URL de l'image
+    const imageUrl = args[0];  
+    const apiUrl = `https://kaiz-apis.gleeze.com/api/zombie?url=${encodeURIComponent(imageUrl)}`;
+
+    // Informer l'utilisateur que la transformation est en cours
+    await sendMessage(senderId, { text: '🧟‍♂️ Transformation en zombie en cours...' }, pageAccessToken);
 
     try {
-      // Appel à l'API avec l'URL de l'image encodée
-      const response = await axios.get(`https://kaiz-apis.gleeze.com/api/zombie?url=${encodeURIComponent(imageUrl)}`, {
-        timeout: 10000 // Timeout de 10 secondes
-      });
-
-      // Vérifie que l'API renvoie une URL valide
-      const processedImageURL = response.data; // L'API renvoie directement l'URL ou un objet ?
-      if (!processedImageURL || typeof processedImageURL !== "string") {
-        throw new Error("Invalid response from API");
-      }
-
-      // Envoie l'image transformée à l'utilisateur
+      // Envoyer l'image transformée à l'utilisateur
       await sendMessage(senderId, {
         attachment: {
-          type: "image",
+          type: 'image',
           payload: {
-            url: processedImageURL
+            url: apiUrl
           }
         }
       }, pageAccessToken);
-
     } catch (error) {
-      console.error("❌ Error applying zombie filter:", error.message, error.stack);
+      console.error('Erreur lors de la transformation en zombie:', error);
+
+      // Envoyer un message d'erreur à l'utilisateur
       await sendMessage(senderId, {
-        text: `❌ An error occurred while applying the zombie filter. Please try again later.`
+        text: '❌ Une erreur est survenue lors de la transformation. Veuillez réessayer avec une autre image.'
       }, pageAccessToken);
     }
   }
