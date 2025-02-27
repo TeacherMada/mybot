@@ -1,70 +1,37 @@
-const axios = require("axios");
+const axios = require('axios');
 const { sendMessage } = require('../handles/sendMessage');
 
 module.exports = {
-  name: "gemini2",
-  description: "Analyse une image ou répond à une question.",
-  usage: "gemini <question> | Répondre à une image",
-  author: "developer",
+    name: 'genai',
+    description: 'Interact with GPT-4 Turbo',
+    usage: 'ai [your message]',
+    author: 'coffee',
 
-  async execute(senderId, args, pageAccessToken, event, imageUrl) {
-    const userPrompt = args.join(" ").trim();
+    async execute(senderId, args, pageAccessToken) {
+        const prompt = args.join(' ');
+        if (!prompt) return sendMessage(senderId, { text: "Usage: ai <question>" }, pageAccessToken);
 
-    // Vérifie si une question ou une image est fournie
-    if (!userPrompt && !imageUrl && !getAttachmentUrl(event)) {
-      return sendMessage(senderId, { text: "❌ Veuillez envoyer une image ou poser une question." }, pageAccessToken);
+        try {
+            const apiUrl = `https://zetbot-page.onrender.com/api/unlimited-ai?model=gpt-4-turbo-2024-04-09&system=You are a helpful assistant&question=${encodeURIComponent(prompt)}`;
+            const { data } = await axios.get(apiUrl);
+
+            // Supposons que la réponse de l'API est directement le texte (ajustez si la structure diffère)
+            const response = data; 
+
+            const parts = [];
+
+            // Diviser la réponse en morceaux de 1999 caractères max
+            for (let i = 0; i < response.length; i += 1999) {
+                parts.push(response.substring(i, i + 1999));
+            }
+
+            // Envoyer toutes les parties du message
+            for (const part of parts) {
+                await sendMessage(senderId, { text: part }, pageAccessToken);
+            }
+
+        } catch (error) {
+            sendMessage(senderId, { text: 'There was an error generating the content. Please try again later.' }, pageAccessToken);
+        }
     }
-
-    // Récupère l'image si elle est attachée ou envoyée en réponse
-    if (!imageUrl) {
-      imageUrl = getAttachmentUrl(event) || (await getRepliedImage(event, pageAccessToken));
-    }
-
-    try {
-      // Nouvelle API
-      const apiUrl = `http://sgp1.hmvhostings.com:25721/geminiv`;
-      const query = {
-        prompt: userPrompt || "Réponds à toutes les questions nécessaires.",
-        image_url: imageUrl || ""
-      };
-
-      console.log("🔍 Requête envoyée à l'API :", apiUrl, query); // Debugging
-
-      const { data } = await axios.get(apiUrl, { params: query });
-
-      console.log("✅ Réponse API :", data); // Affiche la réponse de l'API
-
-      if (!data || !data.response) {
-        return sendMessage(senderId, { text: "❌ Impossible de traiter votre demande." }, pageAccessToken);
-      }
-
-      await sendMessage(senderId, { text: data.response }, pageAccessToken);
-
-    } catch (error) {
-      console.error("❌ Erreur API :", error.response?.data || error.message || error);
-      await sendMessage(senderId, {
-        text: `❌ Une erreur est survenue : ${error.message}`
-      }, pageAccessToken);
-    }
-  }
 };
-
-function getAttachmentUrl(event) {
-  const attachment = event.message?.attachments?.[0];
-  return attachment?.type === "image" ? attachment.payload.url : null;
-}
-
-async function getRepliedImage(event, pageAccessToken) {
-  if (event.message?.reply_to?.mid) {
-    try {
-      const { data } = await axios.get(`https://graph.facebook.com/v21.0/${event.message.reply_to.mid}/attachments`, {
-        params: { access_token: pageAccessToken }
-      });
-      return data?.data?.[0]?.image_data?.url || null;
-    } catch (error) {
-      console.error("Erreur récupération image :", error.message || error);
-      return null;
-    }
-  }
-  return null;
-}
