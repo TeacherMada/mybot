@@ -1,64 +1,43 @@
 const axios = require('axios');
-const fs = require('fs');
-const path = require('path');
 const { sendMessage } = require('../handles/sendMessage');
 
-// Path to the stored image data
-const imageFilePath = path.join(__dirname, '../data/Image.json');
+// Function to get the image URL from a Facebook message reply
+const getImageUrl = async (event, token) => {
+  const mid = event?.message?.reply_to?.mid;
+  if (!mid) return null;
+  try {
+    const { data } = await axios.get(`https://graph.facebook.com/v21.0/${mid}/attachments`, {
+      params: { access_token: token }
+    });
+    return data?.data?.[0]?.image_data?.url || null;
+  } catch (err) {
+    console.error("Image URL fetch error:", err);
+    return null;
+  }
+};
 
 module.exports = {
-  name: 'bgremove',
-  description: 'Remove the background from the user\'s image and send it directly to the user.',
-  usage: 'bgremove',
-  author: 'kenlie',
+  name: 'imgur',
+  description: 'Upload images to Imgur using a specific API.',
+  usage: '-imgur (reply to an image)',
 
-  async execute(senderId, args, pageAccessToken) {
-    // Load image data from the JSON file
-    const imageData = JSON.parse(fs.readFileSync(imageFilePath, 'utf8')) || {};
+  async execute(senderId, args, pageAccessToken, event) {
+    const imageUrl = await getImageUrl(event, pageAccessToken);
+    if (!imageUrl) return sendMessage(senderId, { text: 'No image found to upload. Please reply to an image.' }, pageAccessToken);
 
-    // Check if the senderId has an associated image URL
-    if (imageData[senderId]) {
-      const imgUrl = imageData[senderId];
-      try {
-        // Call the background removal API
-        const response = await axios.get(`https://api.kenliejugarap.com/bgremoved/?imgurl=${encodeURIComponent(imgUrl)}`);
-        
-        if (response.data.status) {
-          const processedImageUrl = response.data.response; // Extract the image URL from the response
+    const apiUrl = `https://api.kenliejugarap.com/imgur/?mediaLink=${encodeURIComponent(imageUrl)}`;
 
-          // Send the processed image URL as an attachment
-          await sendMessage(senderId, {
-            attachment: {
-              type: 'image',
-              payload: {
-                url: processedImageUrl,
-                is_reusable: true
-              }
-            }
-          }, pageAccessToken);
-
-          console.log(`Sent processed image for user ${senderId}`);
-        } else {
-          await sendMessage(senderId, {
-            text: 'Failed to process the image. Please try again later. ❌'
-          }, pageAccessToken);
-        }
-      } catch (error) {
-        console.error('Error:', error);
-        await sendMessage(senderId, {
-          text: 'An error occurred while processing the image. Please try again later. ⚠️'
-        }, pageAccessToken);
-      } finally {
-        // Remove the entry from image.json after processing
-        delete imageData[senderId];
-        fs.writeFileSync(imageFilePath, JSON.stringify(imageData, null, 2), 'utf8');
-        console.log(`Removed stored image URL for user ${senderId}`);
+    try {
+      const response = await axios.get(apiUrl);
+      if (response.data.status) {
+        const imgUrl = response.data.message;
+        await sendMessage(senderId, { text: `Image uploaded to Imgur: ${imgUrl}` }, pageAccessToken);
+      } else {
+        sendMessage(senderId, { text: 'Failed to upload image to Imgur.' }, pageAccessToken);
       }
-    } else {
-      // If no image URL is found for the user
-      await sendMessage(senderId, {
-        text: 'No image found for your ID. Please send an image first before using this command. 📸'
-      }, pageAccessToken);
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      sendMessage(senderId, { text: 'An error occurred while uploading the image.' }, pageAccessToken);
     }
   }
 };
