@@ -4,7 +4,7 @@ const path = require('path');
 const { sendMessage } = require('../handles/sendMessage');
 
 // Path to the stored image data
-const imageFilePath = path.join(__dirname, '../data/image.json');
+const imageFilePath = path.join(__dirname, '../data/Image.json');
 
 module.exports = {
   name: 'bgremove',
