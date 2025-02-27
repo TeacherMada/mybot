@@ -2,7 +2,7 @@ const axios = require('axios');
 const { sendMessage } = require('../handles/sendMessage');
 
 module.exports = {
-    name: 'ai',
+    name: 'genai',
     description: 'Interact with GPT-4 Turbo',
     usage: 'ai [your message]',
     author: 'coffee',
