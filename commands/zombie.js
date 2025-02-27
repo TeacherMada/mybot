@@ -6,7 +6,7 @@ module.exports = {
   name: 'zombie',
   description: 'Transforme une image en style zombie.',
   usage: 'Répondez à une image avec le mot "zombie".',
-  author: 'MakoyQx',
+  author: 'tsanta',
 
   async execute(senderId, args, pageAccessToken, event) {
     // Récupérer l'URL de l'image à partir du message auquel l'utilisateur répond
@@ -14,7 +14,7 @@ module.exports = {
 
     if (!imageUrl) {
       await sendMessage(senderId, {
-        text: '❌ Veuillez répondre à une image avec le mot "zombie".\n\n📌 Astuce : Envoyez une image, puis répondez à cette image en écrivant "zombie".'
+        text: '!❌ Veuillez répondre à une image avec le mot "zombie".\n\n📌 Astuce : Envoyez une image, puis répondez à cette image en écrivant "zombie".'
       }, pageAccessToken);
       return;
     }
@@ -23,7 +23,7 @@ module.exports = {
     const apiUrl = `https://kaiz-apis.gleeze.com/api/zombie?url=${encodeURIComponent(imageUrl)}`;
 
     // Informer l'utilisateur que la transformation est en cours
-    await sendMessage(senderId, { text: '🧟‍♂️ Transformation en zombie en cours...' }, pageAccessToken);
+    await sendMessage(senderId, { text: '!🧟‍♂️ Transformation en zombie en cours...' }, pageAccessToken);
 
     try {
       // Envoyer l'image transformée à l'utilisateur
