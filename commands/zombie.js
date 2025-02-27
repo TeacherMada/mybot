@@ -4,24 +4,33 @@ const { sendMessage } = require('../handles/sendMessage');
 module.exports = {
   name: 'zombie',
   description: 'Transforme une image en style zombie',
-  usage: 'zombie [URL de l’image]',
+  usage: 'Répondez à une image avec le mot "zombie"',
   author: 'tsanta',
 
-  async execute(senderId, args, pageAccessToken) {
-    // Vérifier si une URL d'image est fournie
-    if (!args || args.length === 0) {
+  async execute(senderId, args, pageAccessToken, message) {
+    let imageUrl = null;
+
+    // Vérifier si l'utilisateur répond à un message contenant une image
+    if (message && message.message && message.message.attachments) {
+      const attachment = message.message.attachments[0];
+      if (attachment.type === 'image') {
+        imageUrl = attachment.payload.url;
+      }
+    }
+
+    // Vérifier si une image est disponible
+    if (!imageUrl) {
       await sendMessage(senderId, {
-        text: '❌ Veuillez fournir une URL d’image.\n\n𝗘𝘅𝗮𝗺𝗽𝗹𝗲: zombie https://exemple.com/image.jpg'
+        text: '❌ Veuillez répondre à une image avec le mot "zombie".'
       }, pageAccessToken);
       return;
     }
 
-    // Récupérer l'URL de l'image
-    const imageUrl = args[0];  
+    // Construire l'URL de l'API avec l'image
     const apiUrl = `https://kaiz-apis.gleeze.com/api/zombie?url=${encodeURIComponent(imageUrl)}`;
 
     // Informer l'utilisateur que la transformation est en cours
-    await sendMessage(senderId, { text: '🧟‍♂️ Transformation en zombie en cours...' }, pageAccessToken);
+    await sendMessage(senderId, { text: '🧟‍♂️ Transformation en zombie en cours...🙃' }, pageAccessToken);
 
     try {
       // Envoyer l'image transformée à l'utilisateur
