@@ -3,68 +3,65 @@ const { sendMessage } = require("../handles/sendMessage");
 
 module.exports = {
   name: "zombie",
-  description: "Make Your Picture Zombie",
+  description: "Transforme votre photo en zombie",
   author: "developer",
-  usage: "Send any picture first then reply 'zombie'",
+  usage: "Envoyez une photo puis répondez avec 'zompic'",
 
   async execute(senderId, args, pageAccessToken, imageUrl) {
-    if (!imageUrl) {
-      return sendMessage(senderId, {
-        text: "❌ Please send an image first, then type 'zombie' to enhance it."
+    const urlValidation = /^(https?):\/\/[^\s/$.?#].[^\s]*$/i;
+
+    // Validation de l'image
+    if (!imageUrl || !urlValidation.test(imageUrl)) {
+      return await sendMessage(senderId, {
+        text: "❌ Envoyez d'abord une photo valide (URL http/https) puis tapez 'zompic'"
       }, pageAccessToken);
     }
 
-    // Envoyer l'URL reçue à l'utilisateur pour vérification
-    await sendMessage(senderId, {
-      text: `🔍 Image URL reçue : ${imageUrl}`
-    }, pageAccessToken);
-
-    // Informer l'utilisateur que le traitement est en cours
-    sendMessage(senderId, {
-      text: "⌛ Enhancing image, please wait....!"
-    }, pageAccessToken);
+    // Feedback visuel
+    await axios.post(`https://graph.facebook.com/v13.0/me/messages?access_token=${pageAccessToken}`, {
+      recipient: { id: senderId },
+      sender_action: "typing_on"
+    });
 
     try {
-      // Vérifier si l’image est accessible
-      const imageCheck = await axios.get(imageUrl, { timeout: 5000 });
-      if (imageCheck.status !== 200) {
-        throw new Error("L'image n'est pas accessible.");
-      }
-
-      // Appeler l'API pour traiter l'image
-      const response = await axios.get(`https://kaiz-apis.gleeze.com/api/zombie?url=${encodeURIComponent(imageUrl)}`, {
-        timeout: 10000
+      // Appel API sécurisé
+      const { data } = await axios.get(`https://api.kenliejugarap.com/makeazombie/`, {
+        params: { imageurl: imageUrl },
+        timeout: 15000,
+        validateStatus: (status) => status < 500
       });
 
-      // Envoyer la réponse de l'API à l'utilisateur pour débogage
-      await sendMessage(senderId, {
-        text: `✅ Réponse API reçue : ${JSON.stringify(response.data)}`
-      }, pageAccessToken);
-
-      const processedImageURL = response.data.response;
-      if (!processedImageURL) {
-        throw new Error("L'API n'a pas retourné d'image.");
+      // Vérification réponse API
+      if (!data?.response?.startsWith('http')) {
+        throw new Error('Réponse API inattendue');
       }
 
-      // Envoyer l'image transformée
+      // Envoi résultat
       await sendMessage(senderId, {
         attachment: {
           type: "image",
-          payload: { url: processedImageURL }
+          payload: { url: data.response }
         }
       }, pageAccessToken);
 
     } catch (error) {
-      let errorMessage = `❌ Erreur : ${error.message}`;
+      // Gestion d'erreurs granulaires
+      const errorMap = {
+        ECONNABORTED: "⌛ Temps de traitement dépassé, réessayez !",
+        ENOTFOUND: "🔌 Problème de connexion à l'API",
+        ERR_BAD_REQUEST: "🖼️ L'image est invalide ou corrompue"
+      };
 
-      if (error.response && error.response.status === 500) {
-        errorMessage = "❌ The image processing server is currently down. Please try again later.";
-      } else if (error.message.includes("L'image n'est pas accessible")) {
-        errorMessage = "❌ The image URL is not accessible. Please try another image.";
-      }
+      await sendMessage(senderId, {
+        text: errorMap[error.code] || "❌ Transformation zombie échouée"
+      }, pageAccessToken);
 
-      // Envoyer l'erreur sur Messenger
-      await sendMessage(senderId, { text: errorMessage }, pageAccessToken);
+    } finally {
+      // Désactiver l'indicateur de frappe
+      await axios.post(`https://graph.facebook.com/v13.0/me/messages?access_token=${pageAccessToken}`, {
+        recipient: { id: senderId },
+        sender_action: "typing_off"
+      });
     }
   }
 };
