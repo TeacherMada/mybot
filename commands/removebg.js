@@ -3,32 +3,20 @@ const { sendMessage } = require('../handles/sendMessage');
 
 module.exports = {
   name: 'removebg',
-  description: 'Remove background from an image using the RemoveBG API.',
-  author: 'chilli',
+  description: 'remove background image.',
+  author: 'developer',
 
-  async execute(senderId, args, pageAccessToken, event) {
-    let imageUrl = null;
-
-    // Vérification si une image est attachée au message actuel
-    if (event.message?.attachments?.[0]?.type === 'image') {
-      imageUrl = event.message.attachments[0].payload.url;
-    }
-    // Vérification si le message est une réponse à un autre message avec une image
-    else if (event.message?.reply_to?.mid) {
-      imageUrl = await getRepliedImage(event.message.reply_to.mid, pageAccessToken);
-    }
-
-    // Si aucune image n'est trouvée
+  async execute(senderId, args, pageAccessToken, imageUrl) {
     if (!imageUrl) {
       return sendMessage(senderId, {
-        text: '🙏Please send an image first or reply to a message containing an image with "removebg" to remove its background.'
+        text: `𝗣𝗹𝗲𝗮𝘀𝗲 𝘀𝗲𝗻𝗱 𝗮𝗻 𝗶𝗺𝗮𝗴𝗲 𝗳𝗶𝗿𝘀𝘁, 𝘁𝗵𝗲𝗻 𝘁𝘆𝗽𝗲 "𝗿𝗲𝗺𝗼𝘃𝗲𝗯𝗴" 𝘁𝗼 𝗿𝗲𝗺𝗼𝘃𝗲 𝗶𝘁𝘀 𝗯𝗮𝗰𝗸𝗴𝗿𝗼𝘂𝗻𝗱.`
       }, pageAccessToken);
     }
 
-    await sendMessage(senderId, { text: '>>Removing background from the image, please wait... 🖼️' }, pageAccessToken);
+    await sendMessage(senderId, { text: '⌛ 𝗥𝗲𝗺𝗼𝘃𝗶𝗻𝗴 𝗯𝗮𝗰𝗸𝗴𝗿𝗼𝘂𝗻𝗱 𝗶𝗺𝗮𝗴𝗲 𝗽𝗹𝗲𝗮𝘀𝗲 𝘄𝗮𝗶𝘁...' }, pageAccessToken);
 
     try {
-      const removeBgUrl = `https://kaiz-apis.gleeze.com/api/removebg?url=${encodeURIComponent(imageUrl)}`;
+      const removeBgUrl = `https://ccprojectapis.ddns.net/api/removebg?url=${encodeURIComponent(imageUrl)}`;
 
       await sendMessage(senderId, {
         attachment: {
@@ -47,20 +35,3 @@ module.exports = {
     }
   }
 };
-
-// Fonction pour récupérer l'image d'un message répondu
-async function getRepliedImage(mid, pageAccessToken) {
-  try {
-    const { data } = await axios.get(`https://graph.facebook.com/v21.0/${mid}/attachments`, {
-      params: { access_token: pageAccessToken }
-    });
-
-    if (data?.data?.[0]?.image_data?.url) {
-      return data.data[0].image_data.url;
-    }
-    return null;
-  } catch (error) {
-    console.error('Error fetching replied image:', error);
-    return null;
-  }
-}
