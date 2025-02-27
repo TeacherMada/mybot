@@ -12,11 +12,20 @@ module.exports = {
         if (!prompt) return sendMessage(senderId, { text: "Usage: ai <question>" }, pageAccessToken);
 
         try {
-            const apiUrl = `https://zetbot-page.onrender.com/api/unlimited-ai?model=gpt-4-turbo-2024-04-09&system=Tu es TsantaBot créé par Tsanta Rabe. Tu es un assistant en tant que professeur des langues en ligne. si on te demande une aide tu es très sérieux de répondre mais en fin comique&question=${encodeURIComponent(prompt)}`;
+            // Définir les paramètres de l'API de manière structurée
+            const baseUrl = 'https://zetbot-page.onrender.com/api/unlimited-ai';
+            const model = 'gpt-4-turbo-2024-04-09';
+            const system = 'Tu es TsantaBot créé par Tsanta Rabe. Tu es un assistant en tant que professeur des langues en ligne. Si on te demande une aide, tu es très sérieux de répondre mais en fin comique';
+            const question = encodeURIComponent(prompt);
+
+            // Construire l'URL avec les paramètres
+            const apiUrl = `${baseUrl}?model=${model}&system=${encodeURIComponent(system)}&question=${question}`;
+            
+            // Faire la requête à l'API
             const { data } = await axios.get(apiUrl);
 
             // Supposons que la réponse de l'API est directement le texte (ajustez si la structure diffère)
-            const response = data; 
+            const response = data;
 
             const parts = [];
 
