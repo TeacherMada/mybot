@@ -5,38 +5,54 @@ module.exports = {
   name: "zombie",
   description: "Make Your Picture Zombie",
   author: "developer",
-  usage: "Send any picture first then reply zompic",
+  usage: "Send any picture first then reply 'zombie'",
 
   async execute(senderId, args, pageAccessToken, imageUrl) {
-    // Check if an image URL is provided
+    // Vérifier si une image a été envoyée
     if (!imageUrl) {
       return sendMessage(senderId, {
-        text: `❌... 𝗣𝗹𝗲𝗮𝘀𝗲 𝘀𝗲𝗻𝗱 𝗮𝗻 𝗶𝗺𝗮𝗴𝗲 𝗳𝗶𝗿𝘀𝘁, 𝘁𝗵𝗲𝗻 𝘁𝘆𝗽𝗲 "𝘇𝗼𝗺bie" 𝘁𝗼 𝗲𝗻𝗵𝗮𝗻𝗰𝗲 𝗶𝘁.`
+        text: `❌... Please send an image first, then type "zombie" to enhance it.`
       }, pageAccessToken);
     }
 
-    // Notify the user that enhancement is in progress
-    sendMessage(senderId, { text: "⌛ 𝗘𝗻𝗵𝗮𝗻𝗰𝗶𝗻𝗴 𝗶𝗺𝗮𝗴𝗲 𝗽𝗹𝗲𝗮𝘀𝗲 𝘄𝗮𝗶𝘁....!" }, pageAccessToken);
+    console.log("🔍 Image URL reçue :", imageUrl); // Debugging
+
+    // Informer l'utilisateur que le traitement est en cours
+    sendMessage(senderId, {
+      text: "⌛ 💓Enhancing image, please wait....!"
+    }, pageAccessToken);
 
     try {
-      // Fetch the enhanced image from the API
-      const response = await axios.get(`https://kaiz-apis.gleeze.com/api/zombie?url=${encodeURIComponent(imageUrl)}`);
-      const processedImageURL = response.data.response;
+      // Effectuer la requête à l'API
+      const response = await axios.get(`https://kaiz-apis.gleeze.com/api/zombie?url=${encodeURIComponent(imageUrl)}`, {
+        timeout: 10000, // Timeout de 10 secondes
+        validateStatus: function (status) {
+          return status >= 200 && status < 300; // Accepter uniquement les statuts 200-299
+        }
+      });
 
-      // Send the enhanced image URL back to the user
+      console.log("✅ Réponse API reçue :", response.data); // Debugging
+
+      // Vérifier si la réponse contient bien une URL d'image traitée
+      const processedImageURL = response.data.response;
+      if (!processedImageURL) {
+        throw new Error("L'API n'a pas retourné d'URL d'image.");
+      }
+
+      // Envoyer l'image transformée à l'utilisateur
       await sendMessage(senderId, {
         attachment: {
           type: "image",
-          payload: {
-            url: processedImageURL
-          }
+          payload: { url: processedImageURL }
         }
       }, pageAccessToken);
 
     } catch (error) {
-      console.error("❌ Error processing image:", error);
+      console.error("❌ Erreur lors du traitement de l'image :", error.message);
+
+      // Envoyer un message d'erreur personnalisé à l'utilisateur
       await sendMessage(senderId, {
-        text: `❌ An error occurred while processing the image. Please try again later.`
+        text: `❌ An error occurred while processing the image: ${error.message}`
       }, pageAccessToken);
     }
   }
