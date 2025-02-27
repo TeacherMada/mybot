@@ -15,7 +15,7 @@ module.exports = {
             // Définir les paramètres de l'API de manière structurée
             const baseUrl = 'https://zetbot-page.onrender.com/api/unlimited-ai';
             const model = 'gpt-4-turbo-2024-04-09';
-            const system = 'Tu es TsantaBot créé par Tsanta Rabe. Tu es un assistant en ligne';
+            const system = 'you are helpful assistant';
             const question = encodeURIComponent(prompt);
 
             // Construire l'URL avec les paramètres
