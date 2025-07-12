@@ -5,9 +5,9 @@ const { sendMessage } = require('../handles/sendMessage');
 module.exports = {
   // Metadata for the command
   name: 'sdxl',  // Command name
-  description: 'Generates an image based on a prompt using FluxUltra AI',  // Description
+  description: 'Generates an image based on a prompt using 4gen AI',  // Description
   usage: 'sdxl [prompt]',  // Usage
-  author: 'MakoyQx',  // Author of the command
+  author: 'tsanta',  // Author of the command
 
   // Main function that executes the command
   async execute(senderId, args, pageAccessToken) {
@@ -15,7 +15,7 @@ module.exports = {
     if (!args || args.length === 0) {
       // Send message requesting a prompt if missing
       await sendMessage(senderId, {
-        text: '❌ 𝗣𝗹𝗲𝗮𝘀𝗲 𝗽𝗿𝗼𝘃𝗶𝗱𝗲 𝘆𝗼𝘂𝗿 𝗽𝗿𝗼𝗺𝗽𝘁\n\n𝗘𝘅𝗮𝗺𝗽𝗹𝗲: 𝗳𝗹𝘂𝘅𝘂𝗹𝘁𝗿𝗮 𝗰𝗶𝘁𝘆 𝗮𝘁 𝗻𝗶𝗴𝗵𝘁.'
+        text: '❌ 𝗣𝗹𝗲𝗮𝘀𝗲 𝗽𝗿𝗼𝘃𝗶𝗱𝗲 𝘆𝗼𝘂𝗿 𝗽𝗿𝗼𝗺𝗽𝘁\n\n𝗘𝘅𝗮𝗺𝗽𝗹𝗲: sdxl 𝗰at.'
       }, pageAccessToken);
       return;  // Exit the function if no prompt is provided
     }
@@ -25,7 +25,7 @@ module.exports = {
     const apiUrl = `https://kaiz-apis.gleeze.com/api/4gen?prompt=${encodeURIComponent(prompt)&ratio=9%3A16&stream=false&apikey=4fbe737b-9f02-4151-9290-34e3d83c7c4f`;  // API endpoint with the prompt
 
     // Notify user that the image is being generated
-    await sendMessage(senderId, { text: '⌛ 𝗚𝗲𝗻𝗲𝗿𝗮𝘁𝗶𝗻𝗴 𝗶𝗺𝗮𝗴𝗲 𝗯𝗮𝘀𝗲𝗱 𝗼𝗻 𝘆𝗼𝘂𝗿 𝗽𝗿𝗼𝗺𝗽𝘁, 𝗽𝗹𝗲𝗮𝘀𝗲 𝘄𝗮𝗶𝘁...' }, pageAccessToken);
+    await sendMessage(senderId, { text: '⌛ Miandrasa kely azafady...' }, pageAccessToken);
 
     try {
       // Send the generated image to the user as an attachment
