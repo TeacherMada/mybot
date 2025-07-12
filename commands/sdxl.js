@@ -22,7 +22,7 @@ module.exports = {
 
     // Concatenate arguments to form the prompt
     const prompt = args.join(' ');
-    const image_url = apiUrl;
+    const apiUrl = image_url;
     const apiUrl = `https://kaiz-apis.gleeze.com/api/4gen?prompt=${encodeURIComponent(prompt)}&ratio=9:16&stream=false&apikey=4fbe737b-9f02-4151-9290-34e3d83c7c4f`;  // API endpoint with the prompt
 
     // Notify user that the image is being generated
