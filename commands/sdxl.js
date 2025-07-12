@@ -22,11 +22,10 @@ module.exports = {
 
     // Concatenate arguments to form the prompt
     const prompt = args.join(' ');
-    const apiUrl = image_url;
     const apiUrl = `https://kaiz-apis.gleeze.com/api/4gen?prompt=${encodeURIComponent(prompt)}&ratio=9:16&stream=false&apikey=4fbe737b-9f02-4151-9290-34e3d83c7c4f`;  // API endpoint with the prompt
 
     // Notify user that the image is being generated
-    await sendMessage(senderId, { text: '⌛ Miandrasa kely azafady...' }, pageAccessToken);
+    await sendMessage(senderId, { text: '⌛ Miandrasa kely azafady...😉' }, pageAccessToken);
 
     try {
       // Send the generated image to the user as an attachment
@@ -34,7 +33,7 @@ module.exports = {
         attachment: {
           type: 'image',
           payload: {
-            url: apiUrl  // URL of the generated image
+            url: image_url  // URL of the generated image
           }
         }
       }, pageAccessToken);
