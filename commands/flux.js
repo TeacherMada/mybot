@@ -22,7 +22,7 @@ module.exports = {
 
     // Concatenate arguments to form the prompt
     const prompt = args.join(' ');
-    const apiUrl = `https://kaiz-apis.gleeze.com/api/flux?prompt=${encodeURIComponent(prompt)}&model=4`;  // API endpoint with the prompt
+    const apiUrl = `https://kaiz-apis.gleeze.com/api/flux?prompt=${encodeURIComponent(prompt)}&apikey=4fbe737b-9f02-4151-9290-34e3d83c7c4f`;  // API endpoint with the prompt
 
     // Notify user that the image is being generated
     await sendMessage(senderId, { text: '⌛ Attendez svp ...' }, pageAccessToken);
