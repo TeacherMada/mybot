@@ -13,16 +13,4 @@ const handlePostback = async (event, pageAccessToken) => {
   }
 };
 
-const ytCommand = require('./commands/yt.js');
-
-// Si postback (ex: bouton "Télécharger")
-if (webhook_event.postback && webhook_event.postback.payload) {
-  const payload = webhook_event.postback.payload;
-
-  if (payload.startsWith('DOWNLOAD_YT_')) {
-    await ytCommand.handlePostback(sender_psid, payload, PAGE_ACCESS_TOKEN);
-    return;
-  }
-}
-
 module.exports = { handlePostback };
