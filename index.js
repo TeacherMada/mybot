@@ -4,7 +4,7 @@ const path = require('path');
 const axios = require('axios');
 const { handleMessage } = require('./handles/handleMessage');
 const { handlePostback } = require('./handles/handlePostback');
-const ytCommand = require('./commands/yt.js'); // 🔹 Import du module YouTube
+const ytCommand = require('./commands/yt.js'); // 🔹 Ajout commande YouTube
 
 const app = express();
 app.use(express.json());
@@ -37,27 +37,33 @@ app.post('/webhook', (req, res) => {
       entry.messaging?.forEach(event => {
         const sender_psid = event.sender.id;
 
-        // 🔹 Gestion des postbacks (ex: bouton "📥 Télécharger")
-        if (event.postback && event.postback.payload) {
-          const payload = event.postback.payload;
+        // 🔹 Gestion Quick Reply pour choix vidéo YouTube
+        if (event.message && event.message.quick_reply) {
+          const payload = event.message.quick_reply.payload;
 
-          if (payload.startsWith('DOWNLOAD_YT_')) {
-            ytCommand.handlePostback(sender_psid, payload, PAGE_ACCESS_TOKEN);
-          } else {
-            handlePostback(event, PAGE_ACCESS_TOKEN);
+          if (payload.startsWith('YT_SELECT_')) {
+            ytCommand.handleQuickReply(sender_psid, payload, PAGE_ACCESS_TOKEN);
+            return;
           }
         }
 
-        // 🔹 Gestion des messages texte (commande: yt ...)
-        else if (event.message && event.message.text) {
+        // 🔹 Commande texte : yt [mot clé]
+        if (event.message && event.message.text) {
           const text = event.message.text.trim();
 
           if (text.toLowerCase().startsWith('yt ')) {
             const args = text.split(' ').slice(1);
             ytCommand.execute(sender_psid, args, PAGE_ACCESS_TOKEN);
-          } else {
-            handleMessage(event, PAGE_ACCESS_TOKEN);
+            return;
           }
+
+          // 🔹 Autres messages normaux
+          handleMessage(event, PAGE_ACCESS_TOKEN);
+        }
+
+        // 🔹 Gestion des postbacks
+        else if (event.postback) {
+          handlePostback(event, PAGE_ACCESS_TOKEN);
         }
       });
     });
@@ -100,12 +106,10 @@ const loadMenuCommands = async (isReload = false) => {
   const commands = loadCommands();
 
   if (isReload) {
-    // Delete existing commands if reloading
     await sendMessengerProfileRequest('delete', '/me/messenger_profile', { fields: ['commands'] });
     console.log('Menu commands deleted successfully.');
   }
 
-  // Load new or updated commands
   await sendMessengerProfileRequest('post', '/me/messenger_profile', {
     commands: [{ locale: 'default', commands }],
   });
@@ -125,10 +129,9 @@ fs.watch(COMMANDS_PATH, (eventType, filename) => {
 // Server initialization
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, async () => {
-  console.log(`Server is running on port ${PORT}`);
-  // Load Messenger Menu Commands asynchronously after the server starts
+  console.log(`✅ Server is running on port ${PORT}`);
   try {
-    await loadMenuCommands(); // Load commands without deleting (initial load)
+    await loadMenuCommands();
   } catch (error) {
     console.error('Error loading initial menu commands:', error);
   }
