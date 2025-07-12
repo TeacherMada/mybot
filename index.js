@@ -4,6 +4,7 @@ const path = require('path');
 const axios = require('axios');
 const { handleMessage } = require('./handles/handleMessage');
 const { handlePostback } = require('./handles/handlePostback');
+const ytCommand = require('./commands/yt.js'); // 🔹 Import du module YouTube
 
 const app = express();
 app.use(express.json());
@@ -32,13 +33,31 @@ app.post('/webhook', (req, res) => {
   const { body } = req;
 
   if (body.object === 'page') {
-    // Ensure entry and messaging exist before iterating
     body.entry?.forEach(entry => {
       entry.messaging?.forEach(event => {
-        if (event.message) {
-          handleMessage(event, PAGE_ACCESS_TOKEN);
-        } else if (event.postback) {
-          handlePostback(event, PAGE_ACCESS_TOKEN);
+        const sender_psid = event.sender.id;
+
+        // 🔹 Gestion des postbacks (ex: bouton "📥 Télécharger")
+        if (event.postback && event.postback.payload) {
+          const payload = event.postback.payload;
+
+          if (payload.startsWith('DOWNLOAD_YT_')) {
+            ytCommand.handlePostback(sender_psid, payload, PAGE_ACCESS_TOKEN);
+          } else {
+            handlePostback(event, PAGE_ACCESS_TOKEN);
+          }
+        }
+
+        // 🔹 Gestion des messages texte (commande: yt ...)
+        else if (event.message && event.message.text) {
+          const text = event.message.text.trim();
+
+          if (text.toLowerCase().startsWith('yt ')) {
+            const args = text.split(' ').slice(1);
+            ytCommand.execute(sender_psid, args, PAGE_ACCESS_TOKEN);
+          } else {
+            handleMessage(event, PAGE_ACCESS_TOKEN);
+          }
         }
       });
     });
