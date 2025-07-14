@@ -3,7 +3,7 @@ const { sendMessage } = require('../handles/sendMessage');
 
 module.exports = {
     name: 'venise',
-    description: 'Interact with venise ai',
+    description: 'Interact with venise',
     usage: 'venise [your message]',
     author: 'tsanta',
 
@@ -12,7 +12,7 @@ module.exports = {
         if (!prompt) return sendMessage(senderId, { text: "Usage: venise <question>" }, pageAccessToken);
 
         try {
-            const { data: { response } } = await axios.get(`https://kaiz-apis.gleeze.com/api/venice-ai?ask=${encodeURIComponent(prompt)}&id=${senderId}&apikey=4fbe737b-9f02-4151-9290-34e3d83c7c4f`);
+            const { data: { response } } = await axios.get(`https://kaiz-apis.gleeze.com/api/venise-ai?ask=${encodeURIComponent(prompt)}&uid=${senderId}&apikey=4fbe737b-9f02-4151-9290-34e3d83c7c4f`);
 
             const parts = [];
 
