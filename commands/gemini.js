@@ -1,22 +1,29 @@
-const axios = require('axios');
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 const { sendMessage } = require('../handles/sendMessage');
 
 module.exports = {
-    name: 'genai',
-    description: 'Interact with GPT-4 Turbo',
-    usage: 'ai [your message]',
-    author: 'coffee',
+    name: 'gemini',
+    description: 'Interact with Google Gemini AI',
+    usage: 'gemini [your message]',
+    author: 'TeacherMada',
 
     async execute(senderId, args, pageAccessToken) {
         const prompt = args.join(' ');
-        if (!prompt) return sendMessage(senderId, { text: "Usage: ai <question>" }, pageAccessToken);
+        if (!prompt) return sendMessage(senderId, { text: "Usage: gemini <question>" }, pageAccessToken);
 
         try {
-            const apiUrl = `https://zetbot-page.onrender.com/api/unlimited-ai?model=gpt-4-turbo-2024-04-09&system=You are a helpful assistant&question=${encodeURIComponent(prompt)}`;
-            const { data } = await axios.get(apiUrl);
+            // Récupérer la clé API depuis les variables d'environnement
+            const apiKey = process.env.GEMINI_API_KEY;
+            
+            if (!apiKey) {
+                return sendMessage(senderId, { text: 'API key not configured. Please contact the administrator.' }, pageAccessToken);
+            }
 
-            // Supposons que la réponse de l'API est directement le texte (ajustez si la structure diffère)
-            const response = data; 
+            const genAI = new GoogleGenerativeAI(apiKey);
+            const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+
+            const result = await model.generateContent(prompt);
+            const response = result.response.text();
 
             const parts = [];
 
@@ -31,6 +38,7 @@ module.exports = {
             }
 
         } catch (error) {
+            console.error('Gemini API Error:', error);
             sendMessage(senderId, { text: 'There was an error generating the content. Please try again later.' }, pageAccessToken);
         }
     }
