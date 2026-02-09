@@ -2,13 +2,13 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { sendMessage } = require('../handles/sendMessage');
 
 module.exports = {
-    name: 'gemini',
+    name: 'gemi',
     description: 'Free Google Gemini AI',
-    usage: 'gemini [question]',
+    usage: 'gem [question]',
 
     async execute(senderId, args) {
         const prompt = args.join(' ');
-        if (!prompt) return sendMessage(senderId, { text: 'Ask me anything! Usage: gemini [question]' });
+        if (!prompt) return sendMessage(senderId, { text: 'Ask me anything! Usage: gemi [question Gemini]' });
 
         try {
             // Vérifier la clé API
@@ -20,7 +20,7 @@ module.exports = {
 
             // Initialiser
             const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
-            const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+            const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
             // Générer
             const result = await model.generateContent(prompt);
