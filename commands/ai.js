@@ -26,7 +26,7 @@ module.exports = {
       // Formatage de la réponse selon la structure de l'API
       // Si l'API retourne directement le texte:
       const responseText = data.response || data.text || data.message || data;
-      const formattedMessage = `🤖| ${responseText}`;
+      const formattedMessage = `${responseText}`;
 
       await sendMessage(senderId, { text: formattedMessage }, pageAccessToken);
     } catch (error) {
