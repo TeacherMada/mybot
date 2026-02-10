@@ -1,112 +1,65 @@
-const axios = require("axios");
+const axios = require('axios');
 const { sendMessage } = require('../handles/sendMessage');
 
+// Stockage temporaire de l'historique par userId
+const userHistories = {};
+
 module.exports = {
-  name: "gemini",
-  description: "Interact with Gemini AI Advanced ft. Vision",
-  author: "Rized",
+    name: 'tsanta',
+    description: 'Parler avec TSANTA (Commercial TeacherMada) via API backend',
+    usage: 'tsanta [votre message]',
+    author: 'TeacherMada',
 
-  async execute(senderId, args, pageAccessToken, event, imageUrl) {
-    const userPrompt = args.join(" ").trim().toLowerCase();
-
-    if (!userPrompt && !imageUrl) {
-      return sendMessage(
-        senderId,
-        { 
-          text: `❌ 𝗣𝗹𝗲𝗮𝘀𝗲 𝗽𝗿𝗼𝘃𝗶𝗱𝗲 𝗮 𝗾𝘂𝗲𝘀𝘁𝗶𝗼𝗻 𝗳𝗼𝗿 𝗚𝗲𝗺𝗶𝗻𝗶 𝗔𝗱𝘃𝗮𝗻𝗰𝗲𝗱 𝗼𝗿 𝗮𝗻 𝗶𝗺𝗮𝗴𝗲 𝘄𝗶𝘁𝗵 𝗮 𝗱𝗲𝘀𝗰𝗿𝗶𝗽𝘁𝗶𝗼𝗻 𝗳𝗼𝗿 𝗙𝗹𝗮𝘀𝗵 𝗩𝗶𝘀𝗶𝗼𝗻.` 
-        }, 
-        pageAccessToken
-      );
-    }
-
-    sendMessage(
-      senderId,
-      { text: "⌛ 𝗚𝗲𝗺𝗶𝗻𝗶 𝗶𝘀 𝘁𝗵𝗶𝗻𝗸𝗶𝗻𝗴, 𝗽𝗹𝗲𝗮𝘀𝗲 𝘄𝗮𝗶𝘁... " },
-      pageAccessToken
-    );
-
-    try {
-      if (!imageUrl) {
-        if (event.message?.reply_to?.mid) {
-          imageUrl = await getRepliedImage(event.message.reply_to.mid, pageAccessToken);
-        } else if (event.message?.attachments?.[0]?.type === 'image') {
-          imageUrl = event.message.attachments[0].payload.url;
+    async execute(senderId, args, pageAccessToken) {
+        const prompt = args.join(' ');
+        if (!prompt) {
+            return sendMessage(senderId, 
+                { text: "Usage: tsanta <votre question>" }, 
+                pageAccessToken
+            );
         }
-      }
 
-      const textApiUrl = "http://sgp1.hmvhostings.com:25721/gemini";
-      const imageRecognitionUrl = "https://api.joshweb.click/gemini";
+        try {
+            // Initialiser l'historique pour cet utilisateur si inexistant
+            if (!userHistories[senderId]) userHistories[senderId] = [];
+            const history = userHistories[senderId];
 
-      const useImageRecognition =
-        imageUrl || 
-        ["recognize", "analyze", "analyst", "answer", "analysis"].some(term => userPrompt.includes(term)); 
+            // Appel à ton API TSANTA
+            const { data } = await axios.post(
+                'https://teachermada-agent.onrender.com/api/agent/chat',
+                {
+                    message: prompt,
+                    history: history // envoyer l'historique pour contexte
+                },
+                { headers: { 'Content-Type': 'application/json' } }
+            );
 
-      let responseMessage;
+            const responseText = data.reply || "Pas de réponse.";
 
-      if (useImageRecognition) {
-        const imageApiResponse = await axios.get(imageRecognitionUrl, {
-          params: { prompt: userPrompt, url: imageUrl || "" }
-        });
-        const imageRecognitionResponse = imageApiResponse.data.gemini || "❌ No response from Gemini Flash Vision.";
-        responseMessage = `${imageRecognitionResponse}`;
-      } else {
-        // Fetch from Gemini Advanced (text)
-        const textApiResponse = await axios.get(textApiUrl, { params: { question: userPrompt } });
-        const textResponse = textApiResponse.data.answer || "❌ No response from Gemini Advanced.";
-        responseMessage = `${textResponse}`;
-      }
+            // Ajouter prompt et réponse à l'historique
+            history.push({ role: 'user', content: prompt });
+            history.push({ role: 'tsanta', content: responseText });
 
-      const responseTime = new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila', hour12: true });
+            // Limiter l'historique (ex: 20 derniers échanges)
+            if (history.length > 40) history.splice(0, history.length - 40);
 
-      // Final formatted response
-      const finalResponse = `✨• 𝗚𝗲𝗺𝗶𝗻𝗶 𝗔𝗱𝘃𝗮𝗻𝗰𝗲𝗱 𝗔𝗜\n━━━━━━━━━━━━━━━━━━
-${responseMessage}
-━━━━━━━━━━━━━━━━━━
-📅 𝗗𝗮𝘁𝗲/𝗧𝗶𝗺𝗲: ${responseTime}`;
+            // Découper si message > 2000 caractères (limite Messenger)
+            const parts = [];
+            for (let i = 0; i < responseText.length; i += 1999) {
+                parts.push(responseText.substring(i, i + 1999));
+            }
 
-      await sendConcatenatedMessage(senderId, finalResponse, pageAccessToken);
+            // Envoyer chaque partie
+            for (const part of parts) {
+                await sendMessage(senderId, { text: part }, pageAccessToken);
+            }
 
-    } catch (error) {
-      console.error("❌ Error in Gemini command:", error);
-      sendMessage(
-        senderId,
-        { text: `❌ Error: ${error.message || "Something went wrong."}` },
-        pageAccessToken
-      );
+        } catch (error) {
+            console.error('TSANTA API Error:', error);
+            await sendMessage(senderId, 
+                { text: '⚠️ Une erreur est survenue. Veuillez réessayer plus tard.' }, 
+                pageAccessToken
+            );
+        }
     }
-  }
 };
-
-async function getRepliedImage(mid, pageAccessToken) {
-  const { data } = await axios.get(`https://graph.facebook.com/v21.0/${mid}/attachments`, {
-    params: { access_token: pageAccessToken }
-  });
-
-  if (data?.data?.[0]?.image_data?.url) {
-    return data.data[0].image_data.url;
-  }
-  return "";
-}
-
-async function sendConcatenatedMessage(senderId, text, pageAccessToken) {
-  const maxMessageLength = 2000;
-
-  if (text.length > maxMessageLength) {
-    const messages = splitMessageIntoChunks(text, maxMessageLength);
-
-    for (const message of messages) {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      await sendMessage(senderId, { text: message }, pageAccessToken);
-    }
-  } else {
-    await sendMessage(senderId, { text }, pageAccessToken);
-  }
-}
-
-function splitMessageIntoChunks(message, chunkSize) {
-  const chunks = [];
-  for (let i = 0; i < message.length; i += chunkSize) {
-    chunks.push(message.slice(i, i + chunkSize));
-  }
-  return chunks;
-}
