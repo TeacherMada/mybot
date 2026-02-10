@@ -1,65 +1,45 @@
 const axios = require('axios');
 const { sendMessage } = require('../handles/sendMessage');
 
-// Stockage temporaire de l'historique par userId
-const userHistories = {};
-
 module.exports = {
     name: 'tsanta',
-    description: 'Parler avec TSANTA (Commercial TeacherMada) via API backend',
-    usage: 'tsanta [votre message]',
+    description: 'Interact with TeacherMada Agent',
+    usage: 'tsanta [your message]',
     author: 'TeacherMada',
 
     async execute(senderId, args, pageAccessToken) {
         const prompt = args.join(' ');
         if (!prompt) {
-            return sendMessage(senderId, 
-                { text: "Usage: tsanta <votre question>" }, 
-                pageAccessToken
-            );
+            return sendMessage(senderId, { text: "Usage: tsanta <votre question>" }, pageAccessToken);
         }
 
         try {
-            // Initialiser l'historique pour cet utilisateur si inexistant
-            if (!userHistories[senderId]) userHistories[senderId] = [];
-            const history = userHistories[senderId];
-
-            // Appel à ton API TSANTA
-            const { data } = await axios.post(
-                'https://teachermada-agent.onrender.com/api/agent/chat',
-                {
+            // Appel à ton API GET
+            const { data } = await axios.get('https://teachermada-agent.onrender.com/api/agent/chat', {
+                params: {
                     message: prompt,
-                    history: history // envoyer l'historique pour contexte
-                },
-                { headers: { 'Content-Type': 'application/json' } }
-            );
+                    user_id: senderId
+                }
+            });
 
-            const responseText = data.reply || "Pas de réponse.";
-
-            // Ajouter prompt et réponse à l'historique
-            history.push({ role: 'user', content: prompt });
-            history.push({ role: 'tsanta', content: responseText });
-
-            // Limiter l'historique (ex: 20 derniers échanges)
-            if (history.length > 40) history.splice(0, history.length - 40);
-
-            // Découper si message > 2000 caractères (limite Messenger)
-            const parts = [];
-            for (let i = 0; i < responseText.length; i += 1999) {
-                parts.push(responseText.substring(i, i + 1999));
+            if (!data || !data.response) {
+                return sendMessage(senderId, { text: '⚠️ Pas de réponse du serveur.' }, pageAccessToken);
             }
 
-            // Envoyer chaque partie
-            for (const part of parts) {
-                await sendMessage(senderId, { text: part }, pageAccessToken);
+            // Découpe en morceaux si trop long pour Messenger
+            const chunks = [];
+            for (let i = 0; i < data.response.length; i += 1999) {
+                chunks.push(data.response.substring(i, i + 1999));
+            }
+
+            // Envoi séquentiel
+            for (const chunk of chunks) {
+                await sendMessage(senderId, { text: chunk }, pageAccessToken);
             }
 
         } catch (error) {
-            console.error('TSANTA API Error:', error);
-            await sendMessage(senderId, 
-                { text: '⚠️ Une erreur est survenue. Veuillez réessayer plus tard.' }, 
-                pageAccessToken
-            );
+            console.error('⚠️ TSANTA Bot Error:', error.message);
+            await sendMessage(senderId, { text: 'Erreur système. Réessayez plus tard.' }, pageAccessToken);
         }
     }
 };
