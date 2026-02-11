@@ -2,69 +2,44 @@ const axios = require('axios');
 const { sendMessage } = require('../handles/sendMessage');
 
 module.exports = {
-  name: 'tsanta',
-  description: 'TeacherMada AI Agent',
-  usage: 'tsanta [message]',
-  author: 'TeacherMada',
+    name: 'tsanta',
+    description: 'TeacherMada AI Agent',
 
-  async execute(senderId, args, pageAccessToken) {
+    async execute(senderId, args, pageAccessToken) {
 
-    const prompt = args.join(' ').trim();
-
-    if (!prompt) {
-      return sendMessage(
-        senderId,
-        { text: "💬 Écris ta question après la commande." },
-        pageAccessToken
-      );
-    }
-
-    try {
-
-      const { data } = await axios.get(
-        'https://teachermada-agent.onrender.com/api/agent/chat',
-        {
-          params: {
-            prompt: prompt,     // ✅ bon paramètre
-            id: senderId        // ✅ clé mémoire Facebook
-          },
-          timeout: 45000
+        const prompt = args.join(' ');
+        if (!prompt) {
+            return sendMessage(senderId, { text: "Soraty ny fanontanianao 😊" }, pageAccessToken);
         }
-      );
 
-      console.log("✅ BACKEND RESPONSE:", data);
+        try {
 
-      const replyText =
-        data?.response ||
-        data?.reply ||
-        null;
+            const { data } = await axios.get(
+                'https://teachermada-agent.onrender.com/api/agent/chat',
+                {
+                    params: {
+                        prompt: prompt,
+                        id: senderId
+                    }
+                }
+            );
 
-      if (!replyText) {
-        return sendMessage(
-          senderId,
-          { text: "⚠️ Réponse invalide du serveur." },
-          pageAccessToken
-        );
-      }
+            if (!data.success) {
+                return sendMessage(senderId, { text: "⚠️ Tsy nahazo valiny avy amin'ny serveur." }, pageAccessToken);
+            }
 
-      const parts = replyText.match(/.{1,1999}/g) || [];
+            // 🔥 Convert escaped \n to real line breaks
+            const cleanText = data.response.replace(/\\n/g, '\n');
 
-      for (const part of parts) {
-        await sendMessage(senderId, { text: part }, pageAccessToken);
-      }
+            // 🔥 Send ONE message only
+            await sendMessage(senderId, { text: cleanText }, pageAccessToken);
 
-    } catch (error) {
+        } catch (error) {
+            console.error("❌ Messenger Error:", error.response?.data || error.message);
 
-      console.log("❌ AXIOS ERROR:", error.message);
-      if (error.response) {
-        console.log("❌ RESPONSE DATA:", error.response.data);
-      }
-
-      return sendMessage(
-        senderId,
-        { text: "❌ Erreur système. Réessayez." },
-        pageAccessToken
-      );
+            await sendMessage(senderId, {
+                text: "❌ Erreur système. Réessayez plus tard.👍"
+            }, pageAccessToken);
+        }
     }
-  }
 };
