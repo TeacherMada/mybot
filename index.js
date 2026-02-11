@@ -6,6 +6,10 @@ const axios = require('axios');
 const { handleMessage } = require('./handles/handleMessage');
 const { handlePostback } = require('./handles/handlePostback');
 //const ytCommand = require('./commands/yt.js'); // 🔹 Ajout commande YouTube
+
+const app = express();
+app.use(express.json());
+
 // Route Politique de confidentialité
 app.get("/privacy", (req, res) => {
   res.sendFile(path.join(__dirname, "privacy.html"));
@@ -15,9 +19,6 @@ app.get("/privacy", (req, res) => {
 app.get("/terms", (req, res) => {
   res.sendFile(path.join(__dirname, "terms.html"));
 });
-
-const app = express();
-app.use(express.json());
 
 const VERIFY_TOKEN = 'pagebot';
 const PAGE_ACCESS_TOKEN = fs.readFileSync('token.txt', 'utf8').trim();
