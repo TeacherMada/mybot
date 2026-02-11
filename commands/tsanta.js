@@ -3,60 +3,68 @@ const { sendMessage } = require('../handles/sendMessage');
 
 module.exports = {
   name: 'tsanta',
-  description: 'TeacherMada AI',
+  description: 'TeacherMada AI Agent (Mémoire auto)',
+  usage: 'tsanta [message]',
   author: 'TeacherMada',
 
   async execute(senderId, args, pageAccessToken) {
+
     const prompt = args.join(' ').trim();
 
     if (!prompt) {
       return sendMessage(
         senderId,
-        { text: "Posez votre question 😊" },
+        { text: "💬 Écris ta question après la commande.\n\nExemple:\ntsanta Je veux apprendre anglais" },
         pageAccessToken
       );
     }
 
     try {
-      const response = await axios.get(
+
+      // 🔥 Appel Backend avec senderId comme mémoire
+      const { data } = await axios.get(
         'https://teachermada-agent.onrender.com/api/agent/chat',
         {
           params: {
             message: prompt,
-            user_id: senderId
+            user_id: senderId   // 🎯 Clé mémoire Facebook
           },
-          timeout: 30000 // 🔥 important
+          timeout: 45000,        // ⚡ évite timeout Render sleep
+          validateStatus: () => true
         }
       );
 
-      const data = response.data;
-
-      if (!data || !data.success || !data.response) {
-        console.log("Réponse invalide:", data);
+      // 🔍 Vérification sécurité
+      if (!data || data.success === false || !data.response) {
+        console.log("⚠️ Mauvaise réponse backend:", data);
         return sendMessage(
           senderId,
-          { text: "⚠️ Serveur indisponible." },
+          { text: "⚠️ Le serveur ne répond pas correctement. Réessayez." },
           pageAccessToken
         );
       }
 
-      const text = data.response;
+      const fullText = data.response;
 
-      // découpage Messenger (max 2000)
-      for (let i = 0; i < text.length; i += 1999) {
+      // ✂️ Découpage automatique Messenger (max 2000 char)
+      const parts = fullText.match(/.{1,1999}/g) || [];
+
+      for (const part of parts) {
         await sendMessage(
           senderId,
-          { text: text.substring(i, i + 1999) },
+          { text: part },
           pageAccessToken
         );
       }
 
     } catch (error) {
-      console.error("TSANTA ERROR FULL:", error.response?.data || error.message);
 
-      await sendMessage(
+      console.log("❌ ERREUR AXIOS:");
+      console.log(error.message);
+
+      return sendMessage(
         senderId,
-        { text: "❌ Erreur système. Réessayez plus tard." },
+        { text: "❌ Erreur système. Réessayez dans quelques secondes." },
         pageAccessToken
       );
     }
