@@ -1,35 +1,43 @@
-const express = require('express');
-const fs = require('fs');
-const path = require('path');
-const axios = require('axios');
-const { handleMessage } = require('./handles/handleMessage');
-const { handlePostback } = require('./handles/handlePostback');
-
-require('dotenv').config();
+// index.js
+import express from 'express';
+import fs from 'fs';
+import path from 'path';
+import axios from 'axios';
+import { handleMessage } from './handles/handleMessage.js';
+import { handlePostback } from './handles/handlePostback.js';
+import 'dotenv/config';
 
 const app = express();
 app.use(express.json());
 
-// --- Routes static HTML ---
+// =======================
+// ROUTES STATIQUES
+// =======================
 app.get("/privacy", (req, res) => {
-  res.sendFile(path.join(__dirname, "privacy.html"));
+  res.sendFile(path.join(process.cwd(), "privacy.html"));
 });
 
 app.get("/terms", (req, res) => {
-  res.sendFile(path.join(__dirname, "terms.html"));
+  res.sendFile(path.join(process.cwd(), "terms.html"));
 });
 
-// --- Verification Token pour Facebook Webhook ---
-const VERIFY_TOKEN = 'pagebot';
+// =======================
+// CONFIG MULTI-PAGES
+// =======================
+const VERIFY_TOKEN = process.env.VERIFY_TOKEN || 'pagebot';
 
-// --- Charger dynamiquement les tokens des Pages depuis .env ---
-const PAGE_TOKENS = {};
-(process.env.PAGE_TOKENS || '').split(',').forEach(entry => {
-  const [pageId, token] = entry.split(':').map(s => s.trim());
-  if (pageId && token) PAGE_TOKENS[pageId] = token;
-});
+// Format .env : PAGE_TOKENS=PAGEID1:TOKEN1,PAGEID2:TOKEN2,...
+const PAGE_TOKENS = process.env.PAGE_TOKENS.split(',').reduce((acc, entry) => {
+  const [id, token] = entry.split(':');
+  if (id && token) acc[id] = token.trim();
+  return acc;
+}, {});
 
-// --- Webhook Verification ---
+const getPageToken = (pageId) => PAGE_TOKENS[pageId];
+
+// =======================
+// WEBHOOK VERIFICATION
+// =======================
 app.get('/webhook', (req, res) => {
   const { 'hub.mode': mode, 'hub.verify_token': token, 'hub.challenge': challenge } = req.query;
 
@@ -37,37 +45,49 @@ app.get('/webhook', (req, res) => {
     if (mode === 'subscribe' && token === VERIFY_TOKEN) {
       console.log('WEBHOOK_VERIFIED');
       return res.status(200).send(challenge);
-    }
+    } 
     return res.sendStatus(403);
   }
 
   res.sendStatus(400);
 });
 
-// --- Webhook Event Handling multi-Pages ---
+// =======================
+// WEBHOOK EVENT HANDLER
+// =======================
 app.post('/webhook', async (req, res) => {
   const { body } = req;
 
   if (body.object === 'page') {
-    body.entry?.forEach(entry => {
+    for (const entry of body.entry) {
       const pageId = entry.id;
-      const PAGE_ACCESS_TOKEN = PAGE_TOKENS[pageId];
-      if (!PAGE_ACCESS_TOKEN) return;
+      const pageToken = getPageToken(pageId);
 
-      entry.messaging?.forEach(event => {
-        const senderId = event.sender.id;
+      if (!pageToken) {
+        console.warn(`❌ No PAGE_ACCESS_TOKEN configured for Page ID: ${pageId}`);
+        continue;
+      }
 
-        // 🔹 Message texte
-        if (event.message && event.message.text) {
-          handleMessage(event, PAGE_ACCESS_TOKEN);
+      for (const event of entry.messaging || []) {
+        const sender_psid = event.sender.id;
+
+        try {
+          if (event.message && event.message.text) {
+            // ✅ Appel direct backend TeacherMada
+            await handleMessage(event, pageToken);
+          } else if (event.postback) {
+            await handlePostback(event, pageToken);
+          }
+        } catch (err) {
+          console.error(`❌ Error handling message for user ${sender_psid}:`, err.message);
+          // Message d'erreur simple côté Messenger
+          await axios.post(
+            `https://graph.facebook.com/v21.0/me/messages?access_token=${pageToken}`,
+            { recipient: { id: sender_psid }, message: { text: '⚠️ Le serveur ne répond pas correctement. Réessayez.' } }
+          ).catch(console.error);
         }
-
-        // 🔹 Postbacks
-        else if (event.postback) {
-          handlePostback(event, PAGE_ACCESS_TOKEN);
-        }
-      });
-    });
+      }
+    }
 
     return res.status(200).send('EVENT_RECEIVED');
   }
@@ -75,8 +95,70 @@ app.post('/webhook', async (req, res) => {
   res.sendStatus(404);
 });
 
-// --- Server initialization ---
+// =======================
+// HELPER AXIOS POUR FACEBOOK PROFILE
+// =======================
+const sendMessengerProfileRequest = async (method, url, data = {}, pageToken) => {
+  try {
+    const response = await axios({
+      method,
+      url: `https://graph.facebook.com/v21.0${url}?access_token=${pageToken}`,
+      headers: { 'Content-Type': 'application/json' },
+      data
+    });
+    return response.data;
+  } catch (error) {
+    console.error(`❌ Error in ${method} request for page token ${pageToken}:`, error.response?.data || error.message);
+    throw error;
+  }
+};
+
+// =======================
+// COMMANDS DYNAMIQUES
+// =======================
+const COMMANDS_PATH = path.join(process.cwd(), 'commands');
+
+const loadCommands = () => {
+  return fs.readdirSync(COMMANDS_PATH)
+    .filter(file => file.endsWith('.js'))
+    .map(file => {
+      const command = require(path.join(COMMANDS_PATH, file));
+      return command.name && command.description ? { name: command.name, description: command.description } : null;
+    })
+    .filter(Boolean);
+};
+
+const loadMenuCommandsForAllPages = async () => {
+  const commands = loadCommands();
+
+  for (const pageId in PAGE_TOKENS) {
+    const token = PAGE_TOKENS[pageId];
+    try {
+      await sendMessengerProfileRequest('post', '/me/messenger_profile', { commands }, token);
+      console.log(`✅ Menu commands loaded for Page ${pageId}`);
+    } catch (err) {
+      console.error(`❌ Failed to load menu for Page ${pageId}:`, err.message);
+    }
+  }
+};
+
+// Watch commands directory for changes
+fs.watch(COMMANDS_PATH, (eventType, filename) => {
+  if (['change', 'rename'].includes(eventType) && filename.endsWith('.js')) {
+    loadMenuCommandsForAllPages().catch(err => console.error('❌ Error reloading menu commands:', err));
+  }
+});
+
+// =======================
+// START SERVER
+// =======================
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+
+app.listen(PORT, async () => {
   console.log(`✅ Server running on port ${PORT}`);
+  try {
+    await loadMenuCommandsForAllPages();
+  } catch (err) {
+    console.error('❌ Error loading initial menu commands:', err.message);
+  }
 });
