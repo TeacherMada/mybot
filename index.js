@@ -1,30 +1,35 @@
-
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
 const { handleMessage } = require('./handles/handleMessage');
 const { handlePostback } = require('./handles/handlePostback');
-//const ytCommand = require('./commands/yt.js'); // 🔹 Ajout commande YouTube
+
+require('dotenv').config();
 
 const app = express();
 app.use(express.json());
 
-// Route Politique de confidentialité
+// --- Routes static HTML ---
 app.get("/privacy", (req, res) => {
   res.sendFile(path.join(__dirname, "privacy.html"));
 });
 
-// Route Conditions d'utilisation
 app.get("/terms", (req, res) => {
   res.sendFile(path.join(__dirname, "terms.html"));
 });
 
+// --- Verification Token pour Facebook Webhook ---
 const VERIFY_TOKEN = 'pagebot';
-const PAGE_ACCESS_TOKEN = fs.readFileSync('token.txt', 'utf8').trim();
-const COMMANDS_PATH = path.join(__dirname, 'commands');
 
-// Webhook verification
+// --- Charger dynamiquement les tokens des Pages depuis .env ---
+const PAGE_TOKENS = {};
+(process.env.PAGE_TOKENS || '').split(',').forEach(entry => {
+  const [pageId, token] = entry.split(':').map(s => s.trim());
+  if (pageId && token) PAGE_TOKENS[pageId] = token;
+});
+
+// --- Webhook Verification ---
 app.get('/webhook', (req, res) => {
   const { 'hub.mode': mode, 'hub.verify_token': token, 'hub.challenge': challenge } = req.query;
 
@@ -36,43 +41,28 @@ app.get('/webhook', (req, res) => {
     return res.sendStatus(403);
   }
 
-  res.sendStatus(400); // Bad request if neither mode nor token are provided
+  res.sendStatus(400);
 });
 
-// Webhook event handling
-app.post('/webhook', (req, res) => {
+// --- Webhook Event Handling multi-Pages ---
+app.post('/webhook', async (req, res) => {
   const { body } = req;
 
   if (body.object === 'page') {
     body.entry?.forEach(entry => {
+      const pageId = entry.id;
+      const PAGE_ACCESS_TOKEN = PAGE_TOKENS[pageId];
+      if (!PAGE_ACCESS_TOKEN) return;
+
       entry.messaging?.forEach(event => {
-        const sender_psid = event.sender.id;
+        const senderId = event.sender.id;
 
-        // 🔹 Gestion Quick Reply pour choix vidéo YouTube
-        if (event.message && event.message.quick_reply) {
-          const payload = event.message.quick_reply.payload;
-
-          if (payload.startsWith('YT_SELECT_')) {
-            ytCommand.handleQuickReply(sender_psid, payload, PAGE_ACCESS_TOKEN);
-            return;
-          }
-        }
-
-        // 🔹 Commande texte : yt [mot clé]
+        // 🔹 Message texte
         if (event.message && event.message.text) {
-          const text = event.message.text.trim();
-
-          if (text.toLowerCase().startsWith('yt ')) {
-            const args = text.split(' ').slice(1);
-            ytCommand.execute(sender_psid, args, PAGE_ACCESS_TOKEN);
-            return;
-          }
-
-          // 🔹 Autres messages normaux
           handleMessage(event, PAGE_ACCESS_TOKEN);
         }
 
-        // 🔹 Gestion des postbacks
+        // 🔹 Postbacks
         else if (event.postback) {
           handlePostback(event, PAGE_ACCESS_TOKEN);
         }
@@ -85,65 +75,8 @@ app.post('/webhook', (req, res) => {
   res.sendStatus(404);
 });
 
-// Helper function for Axios requests
-const sendMessengerProfileRequest = async (method, url, data = null) => {
-  try {
-    const response = await axios({
-      method,
-      url: `https://graph.facebook.com/v21.0${url}?access_token=${PAGE_ACCESS_TOKEN}`,
-      headers: { 'Content-Type': 'application/json' },
-      data
-    });
-    return response.data;
-  } catch (error) {
-    console.error(`Error in ${method} request:`, error.response?.data || error.message);
-    throw error;
-  }
-};
-
-// Load all command files from the "commands" directory
-const loadCommands = () => {
-  return fs.readdirSync(COMMANDS_PATH)
-    .filter(file => file.endsWith('.js'))
-    .map(file => {
-      const command = require(path.join(COMMANDS_PATH, file));
-      return command.name && command.description ? { name: command.name, description: command.description } : null;
-    })
-    .filter(Boolean);
-};
-
-// Load or reload Messenger Menu Commands dynamically
-const loadMenuCommands = async (isReload = false) => {
-  const commands = loadCommands();
-
-  if (isReload) {
-    await sendMessengerProfileRequest('delete', '/me/messenger_profile', { fields: ['commands'] });
-    console.log('Menu commands deleted successfully.');
-  }
-
-  await sendMessengerProfileRequest('post', '/me/messenger_profile', {
-    commands: [{ locale: 'default', commands }],
-  });
-
-  console.log('Menu commands loaded successfully.');
-};
-
-// Watch for changes in the commands directory and reload the commands
-fs.watch(COMMANDS_PATH, (eventType, filename) => {
-  if (['change', 'rename'].includes(eventType) && filename.endsWith('.js')) {
-    loadMenuCommands(true).catch(error => {
-      console.error('Error reloading menu commands:', error);
-    });
-  }
-});
-
-// Server initialization
+// --- Server initialization ---
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, async () => {
-  console.log(`✅ Server is running on port ${PORT}`);
-  try {
-    await loadMenuCommands();
-  } catch (error) {
-    console.error('Error loading initial menu commands:', error);
-  }
+app.listen(PORT, () => {
+  console.log(`✅ Server running on port ${PORT}`);
 });
