@@ -25,8 +25,8 @@ module.exports = {
         'https://teachermada-agent.onrender.com/api/agent/chat',
         {
           params: {
-            message: prompt,
-            id: senderId
+            prompt: prompt,     // ✅ bon paramètre
+            id: senderId        // ✅ clé mémoire Facebook
           },
           timeout: 45000
         }
@@ -34,23 +34,19 @@ module.exports = {
 
       console.log("✅ BACKEND RESPONSE:", data);
 
-      // 🔥 Compatibilité totale
       const replyText =
         data?.response ||
         data?.reply ||
-        data?.message ||
         null;
 
       if (!replyText) {
-        console.log("❌ Mauvais format:", data);
         return sendMessage(
           senderId,
-          { text: "⚠️ Réponse serveur invalide." },
+          { text: "⚠️ Réponse invalide du serveur." },
           pageAccessToken
         );
       }
 
-      // ✂️ Découpage Messenger
       const parts = replyText.match(/.{1,1999}/g) || [];
 
       for (const part of parts) {
@@ -58,6 +54,7 @@ module.exports = {
       }
 
     } catch (error) {
+
       console.log("❌ AXIOS ERROR:", error.message);
       if (error.response) {
         console.log("❌ RESPONSE DATA:", error.response.data);
@@ -65,7 +62,7 @@ module.exports = {
 
       return sendMessage(
         senderId,
-        { text: "❌🗨️ Erreur système. Réessayez.👍" },
+        { text: "❌ Erreur système. Réessayez." },
         pageAccessToken
       );
     }
