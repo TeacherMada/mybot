@@ -3,7 +3,7 @@ const { sendMessage } = require('../handles/sendMessage');
 
 module.exports = {
   name: 'tsanta',
-  description: 'TeacherMada AI Agent (Mémoire auto)',
+  description: 'TeacherMada AI Agent',
   usage: 'tsanta [message]',
   author: 'TeacherMada',
 
@@ -14,57 +14,58 @@ module.exports = {
     if (!prompt) {
       return sendMessage(
         senderId,
-        { text: "💬 Écris ta question après la commande.\n\nExemple:\ntsanta Je veux apprendre anglais" },
+        { text: "💬 Écris ta question après la commande." },
         pageAccessToken
       );
     }
 
     try {
 
-      // 🔥 Appel Backend avec senderId comme mémoire
       const { data } = await axios.get(
         'https://teachermada-agent.onrender.com/api/agent/chat',
         {
           params: {
             message: prompt,
-            user_id: senderId   // 🎯 Clé mémoire Facebook
+            user_id: senderId
           },
-          timeout: 45000,        // ⚡ évite timeout Render sleep
-          validateStatus: () => true
+          timeout: 45000
         }
       );
 
-      // 🔍 Vérification sécurité
-      if (!data || data.success === false || !data.response) {
-        console.log("⚠️ Mauvaise réponse backend:", data);
+      console.log("✅ BACKEND RESPONSE:", data);
+
+      // 🔥 Compatibilité totale
+      const replyText =
+        data?.response ||
+        data?.reply ||
+        data?.message ||
+        null;
+
+      if (!replyText) {
+        console.log("❌ Mauvais format:", data);
         return sendMessage(
           senderId,
-          { text: "⚠️ Le serveur ne répond pas correctement. Réessayez." },
+          { text: "⚠️ Réponse serveur invalide." },
           pageAccessToken
         );
       }
 
-      const fullText = data.response;
-
-      // ✂️ Découpage automatique Messenger (max 2000 char)
-      const parts = fullText.match(/.{1,1999}/g) || [];
+      // ✂️ Découpage Messenger
+      const parts = replyText.match(/.{1,1999}/g) || [];
 
       for (const part of parts) {
-        await sendMessage(
-          senderId,
-          { text: part },
-          pageAccessToken
-        );
+        await sendMessage(senderId, { text: part }, pageAccessToken);
       }
 
     } catch (error) {
-
-      console.log("❌ ERREUR AXIOS:");
-      console.log(error.message);
+      console.log("❌ AXIOS ERROR:", error.message);
+      if (error.response) {
+        console.log("❌ RESPONSE DATA:", error.response.data);
+      }
 
       return sendMessage(
         senderId,
-        { text: "❌ Erreur système. Réessayez dans quelques secondes." },
+        { text: "❌🗨️ Erreur système. Réessayez." },
         pageAccessToken
       );
     }
