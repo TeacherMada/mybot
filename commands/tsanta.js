@@ -26,7 +26,7 @@ module.exports = {
         {
           params: {
             message: prompt,
-            user_id: senderId
+            id: senderId
           },
           timeout: 45000
         }
@@ -65,7 +65,7 @@ module.exports = {
 
       return sendMessage(
         senderId,
-        { text: "❌🗨️ Erreur système. Réessayez." },
+        { text: "❌🗨️ Erreur système. Réessayez.👍" },
         pageAccessToken
       );
     }
