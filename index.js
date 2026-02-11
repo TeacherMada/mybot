@@ -5,7 +5,7 @@ const path = require('path');
 const axios = require('axios');
 const { handleMessage } = require('./handles/handleMessage');
 const { handlePostback } = require('./handles/handlePostback');
-const ytCommand = require('./commands/yt.js'); // 🔹 Ajout commande YouTube
+//const ytCommand = require('./commands/yt.js'); // 🔹 Ajout commande YouTube
 
 const app = express();
 app.use(express.json());
