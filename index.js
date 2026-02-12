@@ -7,7 +7,7 @@ import { fileURLToPath } from 'url';
 import { handleMessage } from './handles/handleMessage.js';
 import { handlePostback } from './handles/handlePostback.js';
 import { readdir } from 'fs/promises';
-import { verifyToken } from './services/promo.service.js'; // Pour vérifier le token PDF
+import { verifyToken, markTokenUsed } from './services/promo.service.js'; // Pour vérifier le token PDF
 
 const app = express();
 app.use(express.json());
@@ -92,7 +92,6 @@ app.post('/webhook', async (req, res) => {
 // ===============================
 // DOWNLOAD PDF ROUTE (TOKEN SECURISE & UTILISATION UNIQUE)
 // ===============================
-import { verifyToken, markTokenUsed } from './services/promo.service.js';
 
 app.get('/download', (req, res) => {
   const token = req.query.token;
