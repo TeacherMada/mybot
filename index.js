@@ -90,26 +90,31 @@ app.post('/webhook', async (req, res) => {
 });
 
 // ===============================
-// DOWNLOAD PDF ROUTE (TOKEN SECURISE)
+// DOWNLOAD PDF ROUTE (TOKEN SECURISE & UTILISATION UNIQUE)
 // ===============================
+import { verifyToken, markTokenUsed } from './services/promo.service.js';
+
 app.get('/download', (req, res) => {
   const token = req.query.token;
   if (!token) return res.status(400).send('❌ Token manquant');
 
   const promo = verifyToken(token);
 
-  if (!promo) return res.status(404).send('❌ Lien invalide ou déjà utilisé');
+  if (!promo) return res.status(404).send('❌ Lien invalide, expiré ou déjà utilisé');
 
   const pdfPath = path.join(__dirname, 'pdf', promo.book);
   if (!fs.existsSync(pdfPath)) return res.status(404).send('❌ Fichier PDF introuvable');
 
   // Envoyer le PDF
   res.download(pdfPath, promo.book, (err) => {
-    if (err) console.error('Erreur téléchargement PDF:', err);
-    else console.log(`📦 Livre téléchargé: ${promo.book} pour token: ${token}`);
+    if (err) {
+      console.error('Erreur téléchargement PDF:', err);
+    } else {
+      console.log(`📦 Livre téléchargé: ${promo.book} pour token: ${token}`);
+      markTokenUsed(token); // Invalide le token après téléchargement
+    }
   });
 });
-
 // ===============================
 // DYNAMIC MENU LOADER
 // ===============================
