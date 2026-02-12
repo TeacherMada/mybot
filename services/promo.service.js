@@ -14,7 +14,7 @@ function saveDB(data) {
 }
 
 // =======================
-// ADMIN: créer un code promo
+// ADMIN génère code promo
 // =======================
 export function createPromo(book) {
   const db = readDB();
@@ -25,62 +25,58 @@ export function createPromo(book) {
     code,
     book,
     used: false,
+    downloadToken: null,
     createdAt: Date.now(),
-    expiresAt: Date.now() + 24 * 60 * 60 * 1000, // valable 24h
-    downloadToken: null
+    expiresAt: Date.now() + 24 * 60 * 60 * 1000 // 24h
   };
 
   db.push(promo);
   saveDB(db);
-
   return promo;
 }
 
 // =======================
-// USER: valider code promo
+// USER valide code promo
 // =======================
 export function validatePromo(code) {
   const db = readDB();
+
   const promo = db.find(p => p.code === code);
 
   if (!promo) return { error: "❌ Code invalide." };
   if (promo.used) return { error: "❌ Code déjà utilisé." };
   if (Date.now() > promo.expiresAt) return { error: "❌ Code expiré." };
 
-  // Générer un token unique pour le téléchargement
+  // Générer un token sécurisé pour téléchargement
   const token = crypto.randomBytes(32).toString("hex");
+  promo.used = true;
   promo.downloadToken = token;
-
   saveDB(db);
+
+  return { ...promo, downloadToken: token };
+}
+
+// =======================
+// Vérifier token PDF
+// =======================
+export function verifyToken(token) {
+  const db = readDB();
+  const promo = db.find(p => p.downloadToken === token);
+
+  if (!promo) return null;
+  if (Date.now() > promo.expiresAt) return null;
 
   return promo;
 }
 
 // =======================
-// MARQUER CODE COMME UTILISÉ
+// Marquer token comme utilisé après téléchargement
 // =======================
-export function markPromoUsed(code) {
+export function markTokenUsed(token) {
   const db = readDB();
-  const promo = db.find(p => p.code === code);
-  if (!promo) return false;
-  promo.used = true;
+  const promo = db.find(p => p.downloadToken === token);
+  if (!promo) return;
+
+  promo.downloadToken = null; // Invalide le lien
   saveDB(db);
-  return true;
-}
-
-// =======================
-// VÉRIFIER TOKEN PDF
-// =======================
-export function verifyToken(token) {
-  const db = readDB();
-  return db.find(p => p.downloadToken === token);
-}
-
-// =======================
-// LISTER TOUS LES LIVRES DISPONIBLES
-// =======================
-export function listBooks() {
-  const pdfDir = path.resolve("pdf");
-  if (!fs.existsSync(pdfDir)) return [];
-  return fs.readdirSync(pdfDir).filter(f => f.endsWith(".pdf"));
 }
