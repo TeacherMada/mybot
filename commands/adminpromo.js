@@ -8,14 +8,18 @@ const __dirname = path.dirname(__filename);
 
 export const name = "adminpromo";
 
+// Liste des Admins autorisés (peut être plusieurs séparés par une virgule)
+const ADMINS = (process.env.ADMIN_ID || "")
+  .split(",")
+  .map(a => a.trim());
+
 export async function execute(senderId, args, pageAccessToken, sendMessage) {
-  // 🔹 Vérification admin corrigée
-  const ADMIN_ID = (process.env.ADMIN_ID || "").trim();
-  if (senderId.toString() !== ADMIN_ID) {
+  // Vérification admin
+  if (!ADMINS.includes(senderId.toString())) {
     return sendMessage(senderId, { text: "❌ Accès refusé." }, pageAccessToken);
   }
 
-  // 🔹 Commande list
+  // Commande list
   if (args[0] && args[0].toLowerCase() === "list") {
     const pdfDir = path.join(__dirname, "../pdf");
     const files = fs.readdirSync(pdfDir).filter(f => f.endsWith(".pdf"));
@@ -29,7 +33,7 @@ export async function execute(senderId, args, pageAccessToken, sendMessage) {
     return sendMessage(senderId, { text: `📚 Liste des livres disponibles :\n${listText}` }, pageAccessToken);
   }
 
-  // 🔹 Création promo pour un livre spécifique
+  // Création promo pour un livre spécifique
   const book = args[0];
   if (!book) {
     return sendMessage(senderId, {
