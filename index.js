@@ -2,10 +2,12 @@ import 'dotenv/config';
 import express from 'express';
 import axios from 'axios';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { handleMessage } from './handles/handleMessage.js';
 import { handlePostback } from './handles/handlePostback.js';
 import { readdir } from 'fs/promises';
+import { verifyToken } from './services/promo.service.js'; // Pour vérifier le token PDF
 
 const app = express();
 app.use(express.json());
@@ -25,7 +27,6 @@ process.env.PAGE_TOKENS.split(',').forEach(entry => {
   PAGE_TOKENS[pageId] = token;
 });
 
-
 // ===============================
 // PRIVACY & TERMS
 // ===============================
@@ -36,7 +37,6 @@ app.get("/privacy", (req, res) => {
 app.get("/terms", (req, res) => {
   res.sendFile(path.join(__dirname, "terms.html"));
 });
-
 
 // ===============================
 // WEBHOOK VERIFY
@@ -54,12 +54,10 @@ app.get('/webhook', (req, res) => {
   res.sendStatus(403);
 });
 
-
 // ===============================
 // WEBHOOK EVENTS
 // ===============================
 app.post('/webhook', async (req, res) => {
-
   const body = req.body;
 
   if (body.object !== 'page') {
@@ -67,7 +65,6 @@ app.post('/webhook', async (req, res) => {
   }
 
   for (const entry of body.entry) {
-
     const pageId = entry.id;
     const pageToken = PAGE_TOKENS[pageId];
 
@@ -77,7 +74,6 @@ app.post('/webhook', async (req, res) => {
     }
 
     for (const event of entry.messaging) {
-
       const sender_psid = event.sender.id;
 
       if (event.message) {
@@ -93,6 +89,26 @@ app.post('/webhook', async (req, res) => {
   res.status(200).send('EVENT_RECEIVED');
 });
 
+// ===============================
+// DOWNLOAD PDF ROUTE (TOKEN SECURISE)
+// ===============================
+app.get('/download', (req, res) => {
+  const token = req.query.token;
+  if (!token) return res.status(400).send('❌ Token manquant');
+
+  const promo = verifyToken(token);
+
+  if (!promo) return res.status(404).send('❌ Lien invalide ou déjà utilisé');
+
+  const pdfPath = path.join(__dirname, 'pdf', promo.book);
+  if (!fs.existsSync(pdfPath)) return res.status(404).send('❌ Fichier PDF introuvable');
+
+  // Envoyer le PDF
+  res.download(pdfPath, promo.book, (err) => {
+    if (err) console.error('Erreur téléchargement PDF:', err);
+    else console.log(`📦 Livre téléchargé: ${promo.book} pour token: ${token}`);
+  });
+});
 
 // ===============================
 // DYNAMIC MENU LOADER
@@ -101,21 +117,16 @@ const COMMANDS_PATH = new URL('./commands/', import.meta.url).pathname;
 
 const loadCommands = async () => {
   const files = await readdir(COMMANDS_PATH);
-
   const commands = [];
 
   for (const file of files) {
     if (!file.endsWith('.js')) continue;
-
     const modulePath = `./commands/${file}`;
     const commandModule = await import(modulePath);
     const command = commandModule.default || commandModule;
 
     if (command.name && command.description) {
-      commands.push({
-        name: command.name,
-        description: command.description
-      });
+      commands.push({ name: command.name, description: command.description });
     }
   }
 
@@ -135,25 +146,20 @@ const loadMenuCommandsForAllPages = async () => {
   const commands = await loadCommands();
 
   for (const pageId in PAGE_TOKENS) {
-
     try {
       await sendMessengerProfileRequest(
         'post',
         '/me/messenger_profile',
-        {
-          commands: [{ locale: 'default', commands }]
-        },
+        { commands: [{ locale: 'default', commands }] },
         PAGE_TOKENS[pageId]
       );
 
       console.log(`✅ Menu loaded for Page ${pageId}`);
-
     } catch (err) {
       console.error(`❌ Menu load failed for Page ${pageId}`);
     }
   }
 };
-
 
 // ===============================
 // SERVER START
