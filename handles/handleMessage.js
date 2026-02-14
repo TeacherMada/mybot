@@ -1,72 +1,100 @@
 const fs = require('fs');
 const path = require('path');
 const { sendMessage } = require('./sendMessage');
-const { handleUserResponse } = require('../commands/Traduction'); // Importez handleUserResponse depuis Traduction.js
 const { validatePromo } = require('../services/promo.service.js');
 
 const commands = new Map();
 const prefix = '@';
 
-// Charger les modules de commande
+// ===============================
+// Charger automatiquement commandes
+// ===============================
 fs.readdirSync(path.join(__dirname, '../commands'))
   .filter(file => file.endsWith('.js'))
   .forEach(file => {
     const command = require(`../commands/${file}`);
-    commands.set(command.name.toLowerCase(), command);
+    if (command.name && command.execute) {
+      commands.set(command.name.toLowerCase(), command);
+    }
   });
 
+// ===============================
+// MAIN HANDLER
+// ===============================
 async function handleMessage(event, pageAccessToken) {
-  const senderId = event?.sender?.id;
-  if (!senderId) return console.error('Invalid event object');
+  try {
 
-  const messageText = event?.message?.text?.trim();
-  const quickReply = event?.message?.quick_reply; // Récupérer la réponse rapide
+    const senderId = event?.sender?.id;
+    if (!senderId) return console.error('❌ Invalid sender');
 
-  // 🔹 Si une réponse rapide est détectée
-  if (quickReply) {
-    const selectedLang = quickReply.payload; // La langue sélectionnée par l'utilisateur
-    await handleUserResponse(senderId, selectedLang, messageText, pageAccessToken);
-    return;
-  }
+    const messageText = event?.message?.text?.trim();
+    if (!messageText) return;
 
-  if (!messageText) return console.log('Received event without message text');
+    // ===============================
+    // 🔥 AUTO DETECT PROMO CODE
+    // ===============================
+    const promoMatch = messageText.match(/TM-[A-F0-9]{6}/i);
 
-  // 🔹 Détection automatique du code promo TM-XXXXXX
-  const promoMatch = messageText.match(/TM-\w{6}/i);
-  if (promoMatch) {
-    const code = promoMatch[0].toUpperCase();
+    if (promoMatch) {
+      const code = promoMatch[0].toUpperCase();
+      const result = validatePromo(code);
 
-    const result = validatePromo(code);
+      if (result.error) {
+        return await sendMessage(senderId, { text: result.error }, pageAccessToken);
+      }
 
-    if (result.error) {
-      await sendMessage(senderId, { text: result.error }, pageAccessToken);
-      return;
+      const link = `${process.env.BASE_URL}/download?token=${result.downloadToken}`;
+
+      return await sendMessage(senderId, {
+        text:
+          `✅ Code valide ! Paiement confirmé.\n\n` +
+          `📥 Téléchargez votre livre ici :\n${link}\n\n` +
+          `⚠️ Lien valable une seule fois.`
+      }, pageAccessToken);
     }
 
-    const link = `${process.env.BASE_URL}/download?token=${result.downloadToken}`;
+    // ===============================
+    // 🔥 COMMAND SYSTEM (with prefix)
+    // ===============================
+    if (messageText.startsWith(prefix)) {
+
+      const args = messageText.slice(prefix.length).trim().split(/\s+/);
+      const commandName = args.shift()?.toLowerCase();
+
+      if (commands.has(commandName)) {
+        return await commands
+          .get(commandName)
+          .execute(senderId, args, pageAccessToken);
+      }
+
+      return await sendMessage(senderId, {
+        text: "❌ Commande inconnue."
+      }, pageAccessToken);
+    }
+
+    // ===============================
+    // 🔥 DEFAULT AI (tsanta)
+    // ===============================
+    const defaultCommand = commands.get('tsanta');
+
+    if (defaultCommand) {
+      return await defaultCommand.execute(
+        senderId,
+        [messageText],
+        pageAccessToken
+      );
+    }
 
     await sendMessage(senderId, {
-      text: `✅ Code valide ! Paiement confirmé.\n\n` +
-            `Téléchargez votre livre ici :\n${link}\n\n` +
-            `⚠️ Ce lien est valable une seule fois.`
+      text: "⚠️ Aucun agent par défaut configuré."
     }, pageAccessToken);
-    return; // important pour ne pas continuer vers les commandes
-  }
 
-  // 🔹 Gestion des commandes avec le préfixe
-  const [commandName, ...args] = messageText.startsWith(prefix)
-    ? messageText.slice(prefix.length).split(' ')
-    : messageText.split(' ');
-
-  try {
-    if (commands.has(commandName.toLowerCase())) {
-      await commands.get(commandName.toLowerCase()).execute(senderId, args, pageAccessToken, sendMessage);
-    } else {
-      await commands.get('tsanta').execute(senderId, [messageText], pageAccessToken);
-    }
   } catch (error) {
-    console.error(`Error executing command:`, error);
-    await sendMessage(senderId, { text: error.message || 'There was an error executing that command.' }, pageAccessToken);
+    console.error("❌ Global Messenger Error:", error);
+
+    await sendMessage(event?.sender?.id, {
+      text: "❌ Erreur système. Réessayez plus tard."
+    }, pageAccessToken);
   }
 }
 
