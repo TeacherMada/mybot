@@ -6,7 +6,7 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-export const name = "adminpromo";
+export const name = "admin";
 
 // Liste des Admins autorisés (peut être plusieurs séparés par une virgule)
 const ADMINS = (process.env.ADMIN_ID || "")
