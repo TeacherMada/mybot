@@ -18,6 +18,17 @@ const __dirname = path.dirname(__filename);
 const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
 
 // ===============================
+// 🔒 Anti-Duplicate Protection (Render Safe)
+// ===============================
+const processedMessages = new Set();
+
+// Nettoyage automatique toutes les 5 minutes
+setInterval(() => {
+  processedMessages.clear();
+  console.log("🧹 Duplicate cache cleared");
+}, 5 * 60 * 1000);
+
+// ===============================
 // 🔥 MULTI PAGE TOKEN PARSING
 // ===============================
 const PAGE_TOKENS = {};
@@ -55,7 +66,7 @@ app.get('/webhook', (req, res) => {
 });
 
 // ===============================
-// ✅ WEBHOOK EVENTS (CORRIGÉ)
+// ✅ WEBHOOK EVENTS (FULL SAFE)
 // ===============================
 app.post('/webhook', async (req, res) => {
   const body = req.body;
@@ -80,6 +91,16 @@ app.post('/webhook', async (req, res) => {
 
       // 🔒 Ignore bot's own messages (echo)
       if (event.message && event.message.is_echo) continue;
+
+      // 🔒 Anti-duplicate protection using message ID
+      if (event.message && event.message.mid) {
+        if (processedMessages.has(event.message.mid)) {
+          console.log("⚠️ Duplicate message ignored:", event.message.mid);
+          continue;
+        }
+
+        processedMessages.add(event.message.mid);
+      }
 
       if (event.message) {
         await handleMessage(event, pageToken);
