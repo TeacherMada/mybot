@@ -90,30 +90,122 @@ app.post('/webhook', async (req, res) => {
 });
 
 // ===============================
+
+// ===============================
 // DOWNLOAD PDF ROUTE (TOKEN SECURISE & UTILISATION UNIQUE)
 // ===============================
-
 app.get('/download', (req, res) => {
   const token = req.query.token;
-  if (!token) return res.status(400).send('❌ Token manquant');
+  if (!token) return res.status(400).send(renderCard('❌ Token manquant', 'Veuillez vérifier le lien reçu.'));
 
   const promo = verifyToken(token);
 
-  if (!promo) return res.status(404).send('❌ Lien invalide, expiré ou déjà utilisé');
+  let title = '';
+  let message = '';
+  let showButton = false;
 
-  const pdfPath = path.join(__dirname, 'pdf', promo.book);
-  if (!fs.existsSync(pdfPath)) return res.status(404).send('❌ Fichier PDF introuvable');
-
-  // Envoyer le PDF
-  res.download(pdfPath, promo.book, (err) => {
-    if (err) {
-      console.error('Erreur téléchargement PDF:', err);
+  if (!promo) {
+    title = '❌ Lien invalide';
+    message = 'Le lien est expiré, déjà utilisé ou invalide.';
+  } else {
+    const pdfPath = path.join(__dirname, 'pdf', promo.book);
+    if (!fs.existsSync(pdfPath)) {
+      title = '❌ Fichier introuvable';
+      message = 'Le PDF demandé est manquant.';
     } else {
-      console.log(`📦 Livre téléchargé: ${promo.book} pour token: ${token}`);
-      markTokenUsed(token); // Invalide le token après téléchargement
+      title = '✅ Téléchargement prêt';
+      const expires = new Date(promo.expiresAt).toLocaleString('fr-FR', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+      });
+      message = `
+        Votre livre <strong>${promo.book}</strong> est prêt à être téléchargé.<br>
+        ⚠️ Ce lien est valable jusqu'au <strong>${expires}</strong> et utilisable une seule fois.
+      `;
+      showButton = true;
     }
-  });
+  }
+
+  // Afficher la card
+  res.send(renderCard(title, message, showButton, token));
 });
+
+// ===============================
+// Fonction utilitaire pour générer une "card" responsive
+// ===============================
+function renderCard(title, message, showButton = false, token = '') {
+  return `
+  <!DOCTYPE html>
+  <html lang="fr">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${title}</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        background: #f4f6f8;
+      }
+      .card {
+        background: #fff;
+        border-radius: 12px;
+        padding: 24px;
+        max-width: 400px;
+        width: 90%;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        text-align: center;
+      }
+      .card h1 {
+        font-size: 1.6rem;
+        margin-bottom: 16px;
+        color: #333;
+      }
+      .card p {
+        font-size: 1rem;
+        color: #555;
+        margin-bottom: 24px;
+        line-height: 1.5;
+      }
+      .card a.button {
+        display: inline-block;
+        padding: 12px 24px;
+        background: #0078ff;
+        color: #fff;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: bold;
+        transition: 0.2s;
+      }
+      .card a.button:hover {
+        background: #005fcc;
+      }
+      @media (max-width: 480px) {
+        .card {
+          padding: 16px;
+        }
+        .card h1 {
+          font-size: 1.4rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>${title}</h1>
+      <p>${message}</p>
+      ${showButton ? `<a class="button" href="/download?token=${token}" download>📥 Télécharger maintenant</a>` : ''}
+    </div>
+  </body>
+  </html>
+  `;
+}
+
+
 // ===============================
 // DYNAMIC MENU LOADER
 // ===============================
