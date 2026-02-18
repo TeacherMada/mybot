@@ -94,116 +94,88 @@ app.post('/webhook', async (req, res) => {
 // ===============================
 // DOWNLOAD PDF ROUTE (TOKEN SECURISE & UTILISATION UNIQUE)
 // ===============================
+
 app.get('/download', (req, res) => {
   const token = req.query.token;
-  if (!token) return res.status(400).send(renderCard('❌ Token manquant', 'Veuillez vérifier le lien reçu.'));
+  
+  // Template de base réutilisable
+  const baseTemplate = (content) => `
+    <!DOCTYPE html>
+    <html lang="fr">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Téléchargement · PDF
+      </title>
+      <!-- Bootstrap 5 CSS (minimal) -->
+      <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+      <!-- Une seule ligne de CSS pour l'animation subtile -->
+      <style>body{background:linear-gradient(135deg,#f5f7fa 0%,#e9ecef 100%);min-height:100vh;display:flex;align-items:center;}</style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="row justify-content-center">
+          <div class="col-11 col-sm-10 col-md-8 col-lg-6 col-xl-5">
+            ${content}
+          </div>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  if (!token) {
+    return res.status(400).send(baseTemplate(`
+      <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+        <div class="card-body p-5 text-center">
+          <div class="display-1 text-warning mb-4">⚠️</div>
+          <h1 class="h3 fw-bold text-dark mb-3">Token manquant</h1>
+          <p class="text-secondary-emphasis mb-0">Le lien utilisé ne contient pas de token valide.</p>
+          <p class="text-secondary-emphasis small mt-3 mb-0 opacity-75">Vérifiez votre lien ou contactez le support</p>
+        </div>
+      </div>
+    `));
+  }
 
   const promo = verifyToken(token);
 
-  let title = '';
-  let message = '';
-  let showButton = false;
-
   if (!promo) {
-    title = '❌ Lien invalide';
-    message = 'Le lien est expiré, déjà utilisé ou invalide.';
-  } else {
-    const pdfPath = path.join(__dirname, 'pdf', promo.book);
-    if (!fs.existsSync(pdfPath)) {
-      title = '❌ Fichier introuvable';
-      message = 'Le PDF demandé est manquant.';
-    } else {
-      title = '✅ Téléchargement prêt';
-      const expires = new Date(promo.expiresAt).toLocaleString('fr-FR', {
-        day: '2-digit', month: '2-digit', year: 'numeric',
-        hour: '2-digit', minute: '2-digit'
-      });
-      message = `
-        Votre livre <strong>${promo.book}</strong> est prêt à être téléchargé.<br>
-        ⚠️ Ce lien est valable jusqu'au <strong>${expires}</strong> et utilisable une seule fois.
-      `;
-      showButton = true;
-    }
+    return res.status(404).send(baseTemplate(`
+      <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+        <div class="card-body p-5 text-center">
+          <div class="display-1 text-danger mb-4">🔒</div>
+          <h1 class="h3 fw-bold text-dark mb-3">Lien non valide</h1>
+          <p class="text-secondary-emphasis mb-2">Ce lien a expiré ou a déjà été utilisé.</p>
+          <p class="text-secondary-emphasis small mt-3 mb-0 opacity-75">Les liens de téléchargement sont à usage unique</p>
+        </div>
+      </div>
+    `));
   }
 
-  // Afficher la card
-  res.send(renderCard(title, message, showButton, token));
-});
+  const pdfPath = path.join(__dirname, 'pdf', promo.book);
+  if (!fs.existsSync(pdfPath)) {
+    return res.status(404).send(baseTemplate(`
+      <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+        <div class="card-body p-5 text-center">
+          <div class="display-1 text-secondary mb-4">📄</div>
+          <h1 class="h3 fw-bold text-dark mb-3">Fichier introuvable</h1>
+          <p class="text-secondary-emphasis mb-2">Le document demandé n'est plus disponible.</p>
+          <p class="text-secondary-emphasis small mt-3 mb-0 opacity-75">Notre équipe a été notifiée</p>
+        </div>
+      </div>
+    `));
+  }
 
-// ===============================
-// Fonction utilitaire pour générer une "card" responsive
-// ===============================
-function renderCard(title, message, showButton = false, token = '') {
-  return `
-  <!DOCTYPE html>
-  <html lang="fr">
-  <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${title}</title>
-    <style>
-      body {
-        margin: 0;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        min-height: 100vh;
-        background: #f4f6f8;
-      }
-      .card {
-        background: #fff;
-        border-radius: 12px;
-        padding: 24px;
-        max-width: 400px;
-        width: 90%;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        text-align: center;
-      }
-      .card h1 {
-        font-size: 1.6rem;
-        margin-bottom: 16px;
-        color: #333;
-      }
-      .card p {
-        font-size: 1rem;
-        color: #555;
-        margin-bottom: 24px;
-        line-height: 1.5;
-      }
-      .card a.button {
-        display: inline-block;
-        padding: 12px 24px;
-        background: #0078ff;
-        color: #fff;
-        border-radius: 8px;
-        text-decoration: none;
-        font-weight: bold;
-        transition: 0.2s;
-      }
-      .card a.button:hover {
-        background: #005fcc;
-      }
-      @media (max-width: 480px) {
-        .card {
-          padding: 16px;
-        }
-        .card h1 {
-          font-size: 1.4rem;
-        }
-      }
-    </style>
-  </head>
-  <body>
-    <div class="card">
-      <h1>${title}</h1>
-      <p>${message}</p>
-      ${showButton ? `<a class="button" href="/download?token=${token}" download>📥 Télécharger maintenant</a>` : ''}
-    </div>
-  </body>
-  </html>
-  `;
-}
+  // Envoyer le PDF
+  res.download(pdfPath, promo.book, (err) => {
+    if (err) {
+      console.error('Erreur téléchargement PDF:', err);
+    } else {
+      console.log(`📦 Livre téléchargé: ${promo.book} pour token: ${token}`);
+      markTokenUsed(token);
+    }
+  });
+});
 
 
 // ===============================
