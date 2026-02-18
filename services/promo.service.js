@@ -1,96 +1,97 @@
-const fs = require('fs');
-const path = require('path');
-const { sendMessage } = require('./sendMessage');
-const { validatePromo } = require('../services/promo.service.js');
+const fs = require("fs");
+const path = require("path");
+const crypto = require("crypto");
 
-const commands = new Map();
-const prefix = '@';
+// Chemin vers la base de données promos.json
+const filePath = path.resolve(__dirname, "../database/promos.json");
 
-// ===============================
-// Charger automatiquement les commandes
-// ===============================
-fs.readdirSync(path.join(__dirname, '../commands'))
-  .filter(file => file.endsWith('.js'))
-  .forEach(file => {
-    const command = require(`../commands/${file}`);
-    if (command.name && command.execute) {
-      commands.set(command.name.toLowerCase(), command);
-    }
-  });
-
-// ===============================
-// MAIN HANDLER
-// ===============================
-async function handleMessage(event, pageAccessToken) {
-  try {
-    const senderId = event?.sender?.id;
-    if (!senderId) return console.error('❌ Invalid sender');
-
-    const rawMessage = event?.message?.text || '';
-    // Normaliser le texte pour détecter le code promo (supprime espaces, majuscule)
-    const messageText = rawMessage.replace(/\s+/g, '').trim();
-
-    // ===============================
-    // 🔥 AUTO DETECT PROMO CODE
-    // ===============================
-    // Regex pour détecter TM-XXXXXX (6 caractères hexadécimaux)
-    const promoMatch = messageText.match(/TM-[A-F0-9]{6}/gi);
-
-    if (promoMatch && promoMatch.length > 0) {
-      // On prend le **premier code** détecté
-      const code = promoMatch[0].toUpperCase();
-      const result = validatePromo(code); // function synchrone côté service
-
-      if (result.error) {
-        return await sendMessage(senderId, { text: result.error }, pageAccessToken);
-      }
-
-      const link = `${process.env.BASE_URL}/download?token=${result.downloadToken}`;
-
-      return await sendMessage(senderId, {
-        text:
-          `✅ Code valide ! Paiement confirmé.\n\n` +
-          `📥 Téléchargez votre livre ici :\n${link}\n\n` +
-          `⚠️ Lien valable une seule fois.`
-      }, pageAccessToken);
-    }
-
-    // ===============================
-    // 🔥 COMMAND SYSTEM (with prefix)
-    // ===============================
-    if (messageText.startsWith(prefix)) {
-      const args = messageText.slice(prefix.length).trim().split(/\s+/);
-      const commandName = args.shift()?.toLowerCase();
-
-      if (commands.has(commandName)) {
-        return await commands.get(commandName).execute(senderId, args, pageAccessToken);
-      }
-
-      return await sendMessage(senderId, {
-        text: "❌ Commande inconnue."
-      }, pageAccessToken);
-    }
-
-    // ===============================
-    // 🔥 DEFAULT AI (tsanta)
-    // ===============================
-    const defaultCommand = commands.get('tsanta');
-
-    if (defaultCommand) {
-      return await defaultCommand.execute(senderId, [rawMessage], pageAccessToken);
-    }
-
-    // Aucun agent par défaut configuré
-    await sendMessage(senderId, {
-      text: "⚠️ Aucun agent par défaut configuré."
-    }, pageAccessToken);
-
-  } catch (error) {
-    console.error("❌ Global Messenger Error:", error);
-    await sendMessage(event?.sender?.id, {
-      text: "❌ Erreur système. Réessayez plus tard."
-    }, pageAccessToken);
-  }
+// =======================
+// Lecture/Écriture DB
+// =======================
+function readDB() {
+  if (!fs.existsSync(filePath)) return [];
+  return JSON.parse(fs.readFileSync(filePath, "utf-8"));
 }
 
-module.exports = { handleMessage };
+function saveDB(data) {
+  fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf-8");
+}
+
+// =======================
+// ADMIN génère code promo
+// =======================
+function createPromo(book) {
+  const db = readDB();
+
+  const code = "TM-" + crypto.randomBytes(3).toString("hex").toUpperCase();
+
+  const promo = {
+    code,
+    book,
+    used: false,
+    downloadToken: null,
+    createdAt: Date.now(),
+    expiresAt: Date.now() + 24 * 60 * 60 * 1000 // 24h
+  };
+
+  db.push(promo);
+  saveDB(db);
+  return promo;
+}
+
+// =======================
+// USER valide code promo
+// =======================
+function validatePromo(code) {
+  const db = readDB();
+
+  // Comparaison insensible à la casse
+  const promo = db.find(p => p.code.toUpperCase() === code.toUpperCase());
+
+  if (!promo) return { error: "❌ Code invalide." };
+  if (promo.used) return { error: "❌ Code déjà utilisé." };
+  if (Date.now() > promo.expiresAt) return { error: "❌ Code expiré." };
+
+  // Générer un token sécurisé pour téléchargement
+  const token = crypto.randomBytes(32).toString("hex");
+  promo.used = true;
+  promo.downloadToken = token;
+  saveDB(db);
+
+  return { ...promo, downloadToken: token };
+}
+
+// =======================
+// Vérifier token PDF
+// =======================
+function verifyToken(token) {
+  const db = readDB();
+  const promo = db.find(p => p.downloadToken === token);
+
+  if (!promo) return null;
+  if (Date.now() > promo.expiresAt) return null;
+
+  return promo;
+}
+
+// =======================
+// Marquer token comme utilisé après téléchargement
+// =======================
+function markTokenUsed(token) {
+  const db = readDB();
+  const promo = db.find(p => p.downloadToken === token);
+  if (!promo) return;
+
+  promo.downloadToken = null; // Invalide le lien
+  saveDB(db);
+}
+
+// =======================
+// Export CommonJS
+// =======================
+module.exports = {
+  createPromo,
+  validatePromo,
+  verifyToken,
+  markTokenUsed
+};
