@@ -27,13 +27,13 @@ async function handleMessage(event, pageAccessToken) {
     if (!senderId) return console.error('❌ Invalid sender');
 
     const rawMessage = event?.message?.text || '';
-    // Normaliser le texte pour détecter le code promo (supprime espaces)
-    const messageText = rawMessage.replace(/\s+/g, '').trim();
+    const messageText = rawMessage.replace(/\s+/g, ' ').trim(); // normaliser espaces simples
+    const messageUpper = messageText.toUpperCase();
 
     // ===============================
     // 🔥 AUTO DETECT PROMO CODE
     // ===============================
-    const promoMatch = messageText.match(/TM-[A-F0-9]{6}/gi);
+    const promoMatch = messageText.match(/TM-[A-Z0-9]{6}/gi);
 
     if (promoMatch && promoMatch.length > 0) {
       const code = promoMatch[0].toUpperCase();
@@ -48,25 +48,24 @@ async function handleMessage(event, pageAccessToken) {
       return await sendMessage(senderId, {
         text:
           `✅ Code valide ! Paiement confirmé.\n\n` +
-          `📥 Téléchargez votre livre ici :\n${link}\n\n` +
+          `📥 Téléchargez votre livre ici :\n\n${link}\n\n` +
           `⚠️ Lien valable une seule fois.`
       }, pageAccessToken);
     }
 
     // ===============================
-    // 🔥 COMMAND SYSTEM (with prefix)
+    // 🔥 COMMAND SYSTEM (with or without prefix)
     // ===============================
-    if (messageText.startsWith(prefix)) {
-      const args = messageText.slice(prefix.length).trim().split(/\s+/);
-      const commandName = args.shift()?.toLowerCase();
+    let textToProcess = messageText;
+    if (textToProcess.startsWith(prefix)) {
+      textToProcess = textToProcess.slice(prefix.length).trim();
+    }
 
-      if (commands.has(commandName)) {
-        return await commands.get(commandName).execute(senderId, args, pageAccessToken);
-      }
+    const args = textToProcess.split(/\s+/);
+    const commandName = args.shift()?.toLowerCase();
 
-      return await sendMessage(senderId, {
-        text: "❌ Commande inconnue."
-      }, pageAccessToken);
+    if (commands.has(commandName)) {
+      return await commands.get(commandName).execute(senderId, args, pageAccessToken);
     }
 
     // ===============================
