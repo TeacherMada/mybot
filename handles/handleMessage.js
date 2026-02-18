@@ -7,7 +7,7 @@ const commands = new Map();
 const prefix = '@';
 
 // ===============================
-// Charger automatiquement les commandes
+// Charger automatiquement commandes
 // ===============================
 fs.readdirSync(path.join(__dirname, '../commands'))
   .filter(file => file.endsWith('.js'))
@@ -23,11 +23,12 @@ fs.readdirSync(path.join(__dirname, '../commands'))
 // ===============================
 async function handleMessage(event, pageAccessToken) {
   try {
+
     const senderId = event?.sender?.id;
     if (!senderId) return console.error('❌ Invalid sender');
 
-    const rawMessage = event?.message?.text || '';
-    const messageText = rawMessage.replace(/\s+/g, '').trim(); // normaliser
+    const messageText = event?.message?.text?.trim();
+    if (!messageText) return;
 
     // ===============================
     // 🔥 AUTO DETECT PROMO CODE
@@ -36,7 +37,7 @@ async function handleMessage(event, pageAccessToken) {
 
     if (promoMatch) {
       const code = promoMatch[0].toUpperCase();
-      const result = await validatePromo(code); // ✅ await ajouté
+      const result = validatePromo(code);
 
       if (result.error) {
         return await sendMessage(senderId, { text: result.error }, pageAccessToken);
@@ -46,9 +47,9 @@ async function handleMessage(event, pageAccessToken) {
 
       return await sendMessage(senderId, {
         text:
-          `✅ Code validé ! Paiement confirmé.\n\n` +
-          `📥 Téléchargez votre livre ici :\n\n${link}\n\n` +
-          `⚠️ Lien valable une seule fois.(24h)`
+          `✅ Code valide ! Paiement confirmé.\n\n` +
+          `📥 Téléchargez votre livre ici :\n${link}\n\n` +
+          `⚠️ Lien valable une seule fois.`
       }, pageAccessToken);
     }
 
@@ -56,11 +57,14 @@ async function handleMessage(event, pageAccessToken) {
     // 🔥 COMMAND SYSTEM (with prefix)
     // ===============================
     if (messageText.startsWith(prefix)) {
+
       const args = messageText.slice(prefix.length).trim().split(/\s+/);
       const commandName = args.shift()?.toLowerCase();
 
       if (commands.has(commandName)) {
-        return await commands.get(commandName).execute(senderId, args, pageAccessToken);
+        return await commands
+          .get(commandName)
+          .execute(senderId, args, pageAccessToken);
       }
 
       return await sendMessage(senderId, {
@@ -74,7 +78,11 @@ async function handleMessage(event, pageAccessToken) {
     const defaultCommand = commands.get('tsanta');
 
     if (defaultCommand) {
-      return await defaultCommand.execute(senderId, [rawMessage], pageAccessToken);
+      return await defaultCommand.execute(
+        senderId,
+        [messageText],
+        pageAccessToken
+      );
     }
 
     await sendMessage(senderId, {
@@ -83,6 +91,7 @@ async function handleMessage(event, pageAccessToken) {
 
   } catch (error) {
     console.error("❌ Global Messenger Error:", error);
+
     await sendMessage(event?.sender?.id, {
       text: "❌ Erreur système. Réessayez plus tard."
     }, pageAccessToken);
