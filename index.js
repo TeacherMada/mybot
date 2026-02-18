@@ -73,17 +73,22 @@ app.post('/webhook', async (req, res) => {
       continue;
     }
 
-    for (const event of entry.messaging) {
-      const sender_psid = event.sender.id;
+    for for (const event of entry.messaging) {
 
-      if (event.message) {
-        await handleMessage(event, pageToken);
-      }
+  // 🔒 Ignore delivery & read events
+  if (!event.message && !event.postback) continue;
 
-      if (event.postback) {
-        await handlePostback(event, pageToken);
-      }
-    }
+  // 🔒 Ignore bot's own messages (echo)
+  if (event.message && event.message.is_echo) continue;
+
+  if (event.message) {
+    await handleMessage(event, pageToken);
+  }
+
+  if (event.postback) {
+    await handlePostback(event, pageToken);
+  }
+}
   }
 
   res.status(200).send('EVENT_RECEIVED');
