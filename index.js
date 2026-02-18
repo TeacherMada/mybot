@@ -7,7 +7,7 @@ import { fileURLToPath } from 'url';
 import { handleMessage } from './handles/handleMessage.js';
 import { handlePostback } from './handles/handlePostback.js';
 import { readdir } from 'fs/promises';
-import { verifyToken, markTokenUsed } from './services/promo.service.js'; // Pour vérifier le token PDF
+import { verifyToken, markTokenUsed } from './services/promo.service.js';
 
 const app = express();
 app.use(express.json());
@@ -55,7 +55,7 @@ app.get('/webhook', (req, res) => {
 });
 
 // ===============================
-// WEBHOOK EVENTS
+// ✅ WEBHOOK EVENTS (CORRIGÉ)
 // ===============================
 app.post('/webhook', async (req, res) => {
   const body = req.body;
@@ -73,48 +73,41 @@ app.post('/webhook', async (req, res) => {
       continue;
     }
 
-    for for (const event of entry.messaging) {
+    for (const event of entry.messaging) {
 
-  // 🔒 Ignore delivery & read events
-  if (!event.message && !event.postback) continue;
+      // 🔒 Ignore delivery & read events
+      if (!event.message && !event.postback) continue;
 
-  // 🔒 Ignore bot's own messages (echo)
-  if (event.message && event.message.is_echo) continue;
+      // 🔒 Ignore bot's own messages (echo)
+      if (event.message && event.message.is_echo) continue;
 
-  if (event.message) {
-    await handleMessage(event, pageToken);
-  }
+      if (event.message) {
+        await handleMessage(event, pageToken);
+      }
 
-  if (event.postback) {
-    await handlePostback(event, pageToken);
-  }
-}
+      if (event.postback) {
+        await handlePostback(event, pageToken);
+      }
+    }
   }
 
   res.status(200).send('EVENT_RECEIVED');
 });
 
 // ===============================
-
+// DOWNLOAD PDF ROUTE
 // ===============================
-// DOWNLOAD PDF ROUTE (TOKEN SECURISE & UTILISATION UNIQUE)
-// ===============================
-
 app.get('/download', (req, res) => {
   const token = req.query.token;
   
-  // Template de base réutilisable
   const baseTemplate = (content) => `
     <!DOCTYPE html>
     <html lang="fr">
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Téléchargement · PDF
-      </title>
-      <!-- Bootstrap 5 CSS (minimal) -->
+      <title>Téléchargement · PDF</title>
       <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-      <!-- Une seule ligne de CSS pour l'animation subtile -->
       <style>body{background:linear-gradient(135deg,#f5f7fa 0%,#e9ecef 100%);min-height:100vh;display:flex;align-items:center;}</style>
     </head>
     <body>
@@ -136,7 +129,6 @@ app.get('/download', (req, res) => {
           <div class="display-1 text-warning mb-4">⚠️</div>
           <h1 class="h3 fw-bold text-dark mb-3">Token manquant</h1>
           <p class="text-secondary-emphasis mb-0">Le lien utilisé ne contient pas de token valide.</p>
-          <p class="text-secondary-emphasis small mt-3 mb-0 opacity-75">Vérifiez votre lien ou contactez le support</p>
         </div>
       </div>
     `));
@@ -151,27 +143,24 @@ app.get('/download', (req, res) => {
           <div class="display-1 text-danger mb-4">🔒</div>
           <h1 class="h3 fw-bold text-dark mb-3">Lien non valide</h1>
           <p class="text-secondary-emphasis mb-2">Ce lien a expiré ou a déjà été utilisé.</p>
-          <p class="text-secondary-emphasis small mt-3 mb-0 opacity-75">Les liens de téléchargement sont à usage unique</p>
         </div>
       </div>
     `));
   }
 
   const pdfPath = path.join(__dirname, 'pdf', promo.book);
+
   if (!fs.existsSync(pdfPath)) {
     return res.status(404).send(baseTemplate(`
       <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
         <div class="card-body p-5 text-center">
           <div class="display-1 text-secondary mb-4">📄</div>
           <h1 class="h3 fw-bold text-dark mb-3">Fichier introuvable</h1>
-          <p class="text-secondary-emphasis mb-2">Le document demandé n'est plus disponible.</p>
-          <p class="text-secondary-emphasis small mt-3 mb-0 opacity-75">Notre équipe a été notifiée</p>
         </div>
       </div>
     `));
   }
 
-  // Envoyer le PDF
   res.download(pdfPath, promo.book, (err) => {
     if (err) {
       console.error('Erreur téléchargement PDF:', err);
@@ -181,7 +170,6 @@ app.get('/download', (req, res) => {
     }
   });
 });
-
 
 // ===============================
 // DYNAMIC MENU LOADER
