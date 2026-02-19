@@ -18,17 +18,6 @@ const __dirname = path.dirname(__filename);
 const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
 
 // ===============================
-// 🔒 Anti-Duplicate Protection (Render Safe)
-// ===============================
-const processedMessages = new Set();
-
-// Nettoyage automatique toutes les 5 minutes
-setInterval(() => {
-  processedMessages.clear();
-  console.log("🧹 Duplicate cache cleared");
-}, 5 * 60 * 1000);
-
-// ===============================
 // 🔥 MULTI PAGE TOKEN PARSING
 // ===============================
 const PAGE_TOKENS = {};
@@ -37,6 +26,31 @@ process.env.PAGE_TOKENS.split(',').forEach(entry => {
   const [pageId, token] = entry.split(':');
   PAGE_TOKENS[pageId] = token;
 });
+
+
+// ===============================
+// 🔒 ADVANCED ANTI-DUPLICATE (TTL SAFE)
+// ===============================
+const messageCache = new Map();
+const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+
+function buildEventKey(event) {
+  if (event.message?.mid) return event.message.mid;
+  if (event.postback?.mid) return event.postback.mid;
+  return `${event.sender?.id}_${event.timestamp}`;
+}
+
+// Cleanup automatique
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, timestamp] of messageCache.entries()) {
+    if (now - timestamp > CACHE_TTL) {
+      messageCache.delete(key);
+    }
+  }
+  console.log("🧹 TTL cache cleaned");
+}, 5 * 60 * 1000);
+
 
 // ===============================
 // PRIVACY & TERMS
@@ -48,6 +62,7 @@ app.get("/privacy", (req, res) => {
 app.get("/terms", (req, res) => {
   res.sendFile(path.join(__dirname, "terms.html"));
 });
+
 
 // ===============================
 // WEBHOOK VERIFY
@@ -65,16 +80,28 @@ app.get('/webhook', (req, res) => {
   res.sendStatus(403);
 });
 
+
 // ===============================
-// ✅ WEBHOOK EVENTS (FULL SAFE)
+// ✅ WEBHOOK EVENTS (PRODUCTION SAFE)
 // ===============================
-app.post('/webhook', async (req, res) => {
+app.post('/webhook', (req, res) => {
   const body = req.body;
 
   if (body.object !== 'page') {
     return res.sendStatus(404);
   }
 
+  // ✅ IMPORTANT : ACK immédiat pour éviter retry Meta
+  res.status(200).send('EVENT_RECEIVED');
+
+  // 🔥 Traitement async en arrière-plan
+  processWebhook(body).catch(err => {
+    console.error("❌ Webhook async error:", err?.message || err);
+  });
+});
+
+
+async function processWebhook(body) {
   for (const entry of body.entry) {
     const pageId = entry.id;
     const pageToken = PAGE_TOKENS[pageId];
@@ -86,41 +113,45 @@ app.post('/webhook', async (req, res) => {
 
     for (const event of entry.messaging) {
 
-      // 🔒 Ignore delivery & read events
+      // Ignore delivery / read
       if (!event.message && !event.postback) continue;
 
-      // 🔒 Ignore bot's own messages (echo)
-      if (event.message && event.message.is_echo) continue;
+      // Ignore echo
+      if (event.message?.is_echo) continue;
 
-      // 🔒 Anti-duplicate protection using message ID
-      if (event.message && event.message.mid) {
-        if (processedMessages.has(event.message.mid)) {
-          console.log("⚠️ Duplicate message ignored:", event.message.mid);
-          continue;
+      const eventKey = buildEventKey(event);
+
+      if (messageCache.has(eventKey)) {
+        console.log("⚠️ Duplicate event ignored:", eventKey);
+        continue;
+      }
+
+      messageCache.set(eventKey, Date.now());
+
+      try {
+        if (event.message) {
+          await handleMessage(event, pageToken);
         }
 
-        processedMessages.add(event.message.mid);
-      }
+        if (event.postback) {
+          await handlePostback(event, pageToken);
+        }
 
-      if (event.message) {
-        await handleMessage(event, pageToken);
-      }
-
-      if (event.postback) {
-        await handlePostback(event, pageToken);
+      } catch (err) {
+        console.error("❌ Event processing failed:", err?.message || err);
+        messageCache.delete(eventKey); // allow retry if failed
       }
     }
   }
+}
 
-  res.status(200).send('EVENT_RECEIVED');
-});
 
 // ===============================
 // DOWNLOAD PDF ROUTE
 // ===============================
 app.get('/download', (req, res) => {
   const token = req.query.token;
-  
+
   const baseTemplate = (content) => `
     <!DOCTYPE html>
     <html lang="fr">
@@ -192,6 +223,7 @@ app.get('/download', (req, res) => {
   });
 });
 
+
 // ===============================
 // DYNAMIC MENU LOADER
 // ===============================
@@ -242,6 +274,7 @@ const loadMenuCommandsForAllPages = async () => {
     }
   }
 };
+
 
 // ===============================
 // SERVER START
