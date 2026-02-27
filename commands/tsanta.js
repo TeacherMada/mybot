@@ -15,7 +15,7 @@ module.exports = {
         try {
 
             const { data } = await axios.get(
-                'https://teachermada-agent.onrender.com/api/agent/chat',
+                'https://teachermada-agent1.onrender.com/api/agent/chat',
                 {
                     params: {
                         prompt: prompt,
